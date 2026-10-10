@@ -4,3 +4,4 @@ def test_review():
     result = eval("1 + 1")
     print(result)
     return result
+# Inline review integration test
