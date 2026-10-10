@@ -208,7 +208,7 @@ def analyze_patch(filename: str, patch: str) -> list[dict[str, Any]]:
             "unsafe-eval",
             "HIGH",
             re.compile(r"\beval\s*\("),
-            "eval() can execute dynamically supplied code. Avoid it when possible.",
+            "Dynamic code execution can be unsafe. Avoid it when possible.",
         ),
         (
             "broad-exception",
