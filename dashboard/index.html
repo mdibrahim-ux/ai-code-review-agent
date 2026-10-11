@@ -10,6 +10,113 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+
+<style id="sentinel-theme-styles">
+/* Dark mode is an optional visual layer. The original light theme remains the default. */
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:42px;padding:0 13px;border:1px solid #d8d5ca;border-radius:9px;
+  background:#fffdf7;color:#252525;font:600 12px "DM Mono",monospace;
+  cursor:pointer;transition:background .2s,color .2s,border-color .2s,transform .2s;
+}
+.theme-toggle:hover{transform:translateY(-1px)}
+.theme-toggle:focus-visible{outline:3px solid #6687ff;outline-offset:3px}
+.theme-icon{font-size:17px;line-height:1}
+body.dark-mode{
+  color-scheme:dark;
+  --dm-bg:#10131c;--dm-panel:#191e2a;--dm-panel-2:#202737;--dm-border:#343d50;
+  --dm-text:#edf1fb;--dm-muted:#a5afc2;--dm-blue:#315bff;--dm-yellow:#ffdc45;
+  background:var(--dm-bg)!important;color:var(--dm-text)!important;
+}
+body.dark-mode .app-shell,
+body.dark-mode .main-content{background:var(--dm-bg)!important;color:var(--dm-text)!important}
+body.dark-mode .sidebar,
+body.dark-mode .topbar,
+body.dark-mode .queue-panel,
+body.dark-mode .review-card,
+body.dark-mode .content-panel,
+body.dark-mode .engine-card,
+body.dark-mode .command-palette,
+body.dark-mode .dossier-modal,
+body.dark-mode .modal-backdrop,
+body.dark-mode .palette-backdrop{
+  background-color:var(--dm-panel)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
+}
+body.dark-mode .metric-card,
+body.dark-mode .review-workbench,
+body.dark-mode .queue-item,
+body.dark-mode .evidence-chain,
+body.dark-mode .chain-step,
+body.dark-mode .dossier-body,
+body.dark-mode .dossier-copy-block,
+body.dark-mode .palette-option,
+body.dark-mode .palette-input-wrap,
+body.dark-mode .modal-file-list>div{
+  background-color:var(--dm-panel-2)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
+}
+body.dark-mode h1,body.dark-mode h2,body.dark-mode h3,body.dark-mode h4,
+body.dark-mode strong,body.dark-mode b,body.dark-mode .brand-name,
+body.dark-mode .nav-link,body.dark-mode .queue-title,
+body.dark-mode .review-title-row h3,body.dark-mode .panel-header h2,
+body.dark-mode .event-copy b,body.dark-mode .metric-value,
+body.dark-mode .detail-title,body.dark-mode .dossier-modal h2,
+body.dark-mode .dossier-modal h3,body.dark-mode .palette-option b{
+  color:var(--dm-text)
+}
+body.dark-mode p,body.dark-mode small,body.dark-mode .breadcrumbs,
+body.dark-mode .section-header p,body.dark-mode .queue-description,
+body.dark-mode .metric-foot,body.dark-mode .footprint-name,
+body.dark-mode .event-copy p,body.dark-mode .dossier-modal p,
+body.dark-mode .profile-identity small,body.dark-mode .sidebar-stamp,
+body.dark-mode .nav-label,body.dark-mode .context-kicker,
+body.dark-mode .review-repo-label,body.dark-mode .section-eyebrow{
+  color:var(--dm-muted)
+}
+body.dark-mode .nav-link.active,
+body.dark-mode .queue-item.selected{
+  background:#28334b!important;color:#fff!important;border-color:#4968ff!important
+}
+body.dark-mode .nav-link:hover,body.dark-mode .queue-item:hover,
+body.dark-mode .palette-option:hover{background:#29344b!important;color:#fff!important}
+body.dark-mode .search-trigger,body.dark-mode .clock-chip,
+body.dark-mode .workspace-switch,body.dark-mode .profile-switch,
+body.dark-mode .plain-icon-button,body.dark-mode .text-button,
+body.dark-mode .button-outline-light,body.dark-mode .inline-action,
+body.dark-mode .timeline-action,body.dark-mode .search-trigger input,
+body.dark-mode .palette-input-wrap input{
+  background:var(--dm-panel-2)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
+}
+body.dark-mode .button-ink{background:#f0f2f8!important;color:#151923!important}
+body.dark-mode .button-yellow{background:var(--dm-yellow)!important;color:#171717!important}
+body.dark-mode .hero-panel{box-shadow:0 18px 55px #0005}
+body.dark-mode .page-footer{border-color:var(--dm-border)!important;color:var(--dm-muted)!important}
+body.dark-mode .review-divider,body.dark-mode .queue-panel-footer,
+body.dark-mode .dossier-footer{border-color:var(--dm-border)!important}
+body.dark-mode .footprint-track{background:#343d50!important}
+body.dark-mode .evidence-empty,body.dark-mode .quality-banner{color:var(--dm-text)}
+body.dark-mode .theme-toggle{background:#202737;color:#f4f6ff;border-color:#46516a}
+body.dark-mode .theme-toggle:hover{background:#2b354a}
+body.dark-mode input,body.dark-mode textarea,body.dark-mode select{
+  background:#202737!important;color:#edf1fb!important;border-color:#46516a!important
+}
+body.dark-mode kbd{background:#252d3d!important;color:#dbe3f4!important;border-color:#46516a!important}
+@media(max-width:640px){.theme-label{display:none}.theme-toggle{width:42px;padding:0}}
+</style>
+
+
+<style id="sample-metrics-disclosure">
+.sample-metrics-notice{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:18px 0 10px;padding:12px 15px;border:1px dashed #b8a64d;
+  border-radius:8px;background:#fff6c9;color:#3d3514;
+  font:500 12px/1.5 "DM Mono",monospace;
+}
+.sample-metrics-notice strong{font-weight:700;letter-spacing:.05em}
+body.dark-mode .sample-metrics-notice{
+  background:#302b1b;color:#ffeb9a;border-color:#8c7935
+}
+</style>
+
 </head>
 <body>
   <a class="skip-link" href="#overview">Skip to dashboard</a>
@@ -47,7 +154,7 @@
     <main class="main-content" id="overview">
       <header class="topbar">
         <div class="breadcrumbs"><span>Workspace</span><b>/</b><strong>Command center</strong><span class="preview-label"><i></i> LOCAL PREVIEW</span></div>
-        <div class="topbar-actions"><div class="clock-chip"><span class="clock-diamond">◆</span><span id="clock">--:--:--</span><small>IST</small></div><button class="search-trigger" id="commandOpen" aria-label="Open command menu"><span class="search-glass">⌕</span><span>Quick search</span><kbd>Ctrl K</kbd></button><button class="top-avatar" id="openModelDetails" aria-label="Open Sentinel model details">S<span class="avatar-indicator"></span></button></div>
+        <div class="topbar-actions"><div class="clock-chip"><span class="clock-diamond">◆</span><span id="clock">--:--:--</span><small>IST</small></div><button class="search-trigger" id="commandOpen" aria-label="Open command menu"><span class="search-glass">⌕</span><span>Quick search</span><kbd>Ctrl K</kbd></button><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span></button><button class="top-avatar" id="openModelDetails" aria-label="Open Sentinel model details">S<span class="avatar-indicator"></span></button></div>
       </header>
 
       <section class="hero-panel" aria-labelledby="heroTitle">
@@ -58,7 +165,7 @@
             <p class="eyebrow"><span class="eyebrow-slash">//</span> EVIDENCE-FIRST CODE REVIEW</p>
             <h1 id="heroTitle">Ship with<br><span>conviction<span class="period">.</span></span></h1>
             <p class="hero-summary">Good reviews do more than flag a line. They show you <strong>what changed, why it matters, and where the proof lives.</strong></p>
-            <div class="hero-cta-row"><button class="button button-yellow" id="simulateReview"><span class="button-icon">▶</span><span>Run demo review</span><span class="button-arrow">↗</span></button><button class="button button-outline-light" id="jumpTimeline"><span class="button-icon">↘</span> Flight recorder</button></div>
+            <div class="hero-cta-row"><button class="button button-yellow" id="simulateReview"><span class="button-icon">▶</span><span>Run code review</span><span class="button-arrow">↗</span></button><button class="button button-outline-light" id="jumpTimeline"><span class="button-icon">↘</span> Flight recorder</button></div>
             <div class="hero-proofline"><span><b>01</b> Deterministic rules</span><span><b>02</b> Traceable findings</span><span class="demo-tag"><i></i> SAMPLE DATA</span></div>
           </div>
           <div class="hero-illustration" aria-label="Stylized Sentinel signal illustration">
@@ -75,11 +182,15 @@
         <div class="hero-footer"><span><i class="footer-square"></i> ENGINE STATUS <b>READY</b></span><span>LAST SYNC <b>JUST NOW</b></span><span class="hero-footer-slogan">NO BLACK BOXES. JUST BETTER QUESTIONS.</span></div>
       </section>
 
-      <section class="metrics-grid" aria-label="Review statistics">
-        <article class="metric-card metric-blue reveal-item"><div class="metric-top"><span>REVIEWS PROCESSED</span><span class="metric-glyph">↗</span></div><div class="metric-value" data-count="128">0</div><div class="metric-foot"><span class="metric-chip chip-white">+12.8%</span><span>over the previous 7 days</span><div class="spark-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><span class="metric-index">01</span></article>
-        <article class="metric-card metric-yellow reveal-item"><div class="metric-top"><span>FINDINGS SURFACED</span><span class="metric-glyph">⌁</span></div><div class="metric-value" data-count="46">0</div><div class="metric-foot"><span class="metric-underline">Across 128 reviews</span><span>rule matches</span></div><div class="metric-band metric-band-orange"></div><span class="metric-index">02</span></article>
-        <article class="metric-card metric-red reveal-item"><div class="metric-top"><span>HIGH-RISK SIGNALS</span><span class="metric-glyph">!</span></div><div class="metric-value" data-count="8">0</div><div class="metric-foot"><span class="metric-underline">2 critical · 6 high</span><span>need attention</span></div><div class="risk-blocks" aria-label="8 high risk signals"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="metric-index">03</span></article>
-        <article class="metric-card metric-mint reveal-item"><div class="metric-top"><span>CLEAN REVIEW RATE</span><span class="metric-glyph">✓</span></div><div class="metric-value">82<span class="metric-percent">%</span></div><div class="metric-foot"><span class="metric-chip chip-ink">↑ 4.2%</span><span>no findings detected</span></div><div class="clean-meter"><span></span></div><span class="metric-index">04</span></article>
+      <div class="sample-metrics-notice" role="note">
+        <strong>DEMO / SAMPLE METRICS</strong>
+        <span>128 reviews, 46 findings, 8 high-risk signals and 82% are illustrative design values, not live production statistics.</span>
+      </div>
+      <section class="metrics-grid" aria-label="Sample review statistics">
+        <article class="metric-card metric-blue reveal-item"><div class="metric-top"><span>SAMPLE REVIEWS PROCESSED</span><span class="metric-glyph">↗</span></div><div class="metric-value" data-count="128">0</div><div class="metric-foot"><span class="metric-chip chip-white">+12.8%</span><span>over the previous 7 days</span><div class="spark-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><span class="metric-index">01</span></article>
+        <article class="metric-card metric-yellow reveal-item"><div class="metric-top"><span>SAMPLE FINDINGS SURFACED</span><span class="metric-glyph">⌁</span></div><div class="metric-value" data-count="46">0</div><div class="metric-foot"><span class="metric-underline">Across 128 reviews</span><span>rule matches</span></div><div class="metric-band metric-band-orange"></div><span class="metric-index">02</span></article>
+        <article class="metric-card metric-red reveal-item"><div class="metric-top"><span>SAMPLE HIGH-RISK SIGNALS</span><span class="metric-glyph">!</span></div><div class="metric-value" data-count="8">0</div><div class="metric-foot"><span class="metric-underline">2 critical · 6 high</span><span>need attention</span></div><div class="risk-blocks" aria-label="8 high risk signals"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="metric-index">03</span></article>
+        <article class="metric-card metric-mint reveal-item"><div class="metric-top"><span>SAMPLE CLEAN REVIEW RATE</span><span class="metric-glyph">✓</span></div><div class="metric-value">82<span class="metric-percent">%</span></div><div class="metric-foot"><span class="metric-chip chip-ink">↑ 4.2%</span><span>no findings detected</span></div><div class="clean-meter"><span></span></div><span class="metric-index">04</span></article>
       </section>
 
       <section class="section-header" id="pull-requests"><div class="section-header-left"><div class="section-eyebrow"><span>01</span> INCOMING SIGNAL</div><h2>The review queue <span class="section-count">04</span></h2><p>Changes in motion. Evidence before assumptions.</p></div><button class="text-button" id="viewAllReviews">View every review <span>↗</span></button></section>
@@ -132,8 +243,32 @@
     </section>
   </div>
 
-  <div class="palette-backdrop hidden" id="paletteBackdrop" aria-hidden="true"><div class="command-palette" role="dialog" aria-modal="true" aria-label="Quick action menu"><div class="palette-topline"><span>COMMAND INDEX</span><button id="paletteClose" aria-label="Close quick search">ESC ×</button></div><div class="palette-input-wrap"><span>⌕</span><input id="paletteInput" placeholder="What do you want to inspect?" autocomplete="off"><kbd>CTRL K</kbd></div><div class="palette-label">QUICK ACTIONS</div><button class="palette-option" data-action="review"><span class="palette-option-icon yellow-icon">▶</span><span><b>Run demo review</b><small>Add a simulated review event</small></span><kbd>R</kbd></button><button class="palette-option" data-action="queue"><span class="palette-option-icon blue-icon">⑂</span><span><b>Go to review queue</b><small>Inspect pull requests</small></span><kbd>Q</kbd></button><button class="palette-option" data-action="timeline"><span class="palette-option-icon mint-icon">◷</span><span><b>Open flight recorder</b><small>See recent review events</small></span><kbd>T</kbd></button><button class="palette-option" data-action="evidence"><span class="palette-option-icon red-icon">⌁</span><span><b>Explore evidence chain</b><small>Inspect an illustrative finding</small></span><kbd>E</kbd></button><button class="palette-option" data-action="details"><span class="palette-option-icon ink-icon">S</span><span><b>Open review dossier</b><small>View the selected review details</small></span><kbd>D</kbd></button><div class="palette-footer"><span>↵ SELECT</span><span>ESC CLOSE</span><span>ALL ACTIONS ARE LOCAL DEMO</span></div></div></div>
+  <div class="palette-backdrop hidden" id="paletteBackdrop" aria-hidden="true"><div class="command-palette" role="dialog" aria-modal="true" aria-label="Quick action menu"><div class="palette-topline"><span>COMMAND INDEX</span><button id="paletteClose" aria-label="Close quick search">ESC ×</button></div><div class="palette-input-wrap"><span>⌕</span><input id="paletteInput" placeholder="What do you want to inspect?" autocomplete="off"><kbd>CTRL K</kbd></div><div class="palette-label">QUICK ACTIONS</div><button class="palette-option" data-action="review"><span class="palette-option-icon yellow-icon">▶</span><span><b>Run code review</b><small>Add a simulated review event</small></span><kbd>R</kbd></button><button class="palette-option" data-action="queue"><span class="palette-option-icon blue-icon">⑂</span><span><b>Go to review queue</b><small>Inspect pull requests</small></span><kbd>Q</kbd></button><button class="palette-option" data-action="timeline"><span class="palette-option-icon mint-icon">◷</span><span><b>Open flight recorder</b><small>See recent review events</small></span><kbd>T</kbd></button><button class="palette-option" data-action="evidence"><span class="palette-option-icon red-icon">⌁</span><span><b>Explore evidence chain</b><small>Inspect an illustrative finding</small></span><kbd>E</kbd></button><button class="palette-option" data-action="details"><span class="palette-option-icon ink-icon">S</span><span><b>Open review dossier</b><small>View the selected review details</small></span><kbd>D</kbd></button><div class="palette-footer"><span>↵ SELECT</span><span>ESC CLOSE</span><span>ALL ACTIONS ARE LOCAL DEMO</span></div></div></div>
   <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon">✓</span><span id="toastMessage">Action complete.</span><button id="toastClose" aria-label="Dismiss notification">×</button></div>
+
+<script id="sentinel-theme-toggle">
+(() => {
+  const button = document.getElementById("themeToggle");
+  if (!button) return;
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  const applyTheme = (isDark) => {
+    document.body.classList.toggle("dark-mode", isDark);
+    button.setAttribute("aria-pressed", String(isDark));
+    button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+    button.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+    button.innerHTML = isDark
+      ? '<span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>'
+      : '<span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span>';
+    if (themeMeta) themeMeta.setAttribute("content", isDark ? "#10131c" : "#f4f1e9");
+    try { localStorage.setItem("sentinel-theme", isDark ? "dark" : "light"); } catch (_) {}
+  };
+  let saved = "light";
+  try { saved = localStorage.getItem("sentinel-theme") || "light"; } catch (_) {}
+  applyTheme(saved === "dark");
+  button.addEventListener("click", () => applyTheme(!document.body.classList.contains("dark-mode")));
+})();
+</script>
+
   <script src="script.js"></script>
 </body>
 </html>

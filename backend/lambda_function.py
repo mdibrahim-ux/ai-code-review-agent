@@ -16,6 +16,8 @@ from typing import Any
 
 import boto3
 
+from .review_engine.analyzer import analyze_patch, review_files
+
 
 AWS_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 PARAMETER_NAME = "/code-review-agent/github-token"
@@ -179,111 +181,6 @@ def get_changed_files(
 
 
 
-def analyze_patch(filename: str, patch: str) -> list[dict[str, Any]]:
-    """Run deterministic security and quality rules on added lines."""
-    findings: list[dict[str, Any]] = []
-    current_line: int | None = None
-
-    # Avoid reporting intentional test fixtures as production findings.
-    normalized_path = filename.replace("\\", "/").lower()
-    is_test_file = (
-        normalized_path.startswith("tests/")
-        or "/tests/" in normalized_path
-        or normalized_path.startswith("test_")
-        or "/test_" in normalized_path
-        or normalized_path.endswith("_test.py")
-    )
-
-    rules = [
-        (
-            "hardcoded-secret",
-            "HIGH",
-            re.compile(
-                r"""(?i)\b(?:api[_-]?key|secret|password|access[_-]?token)\b"""
-                r"""\s*[:=]\s*["'][^"']{8,}["']"""
-            ),
-            "Possible hardcoded credential. Use a secure secret store.",
-        ),
-        (
-            "unsafe-eval",
-            "HIGH",
-            re.compile(r"\beval\s*\("),
-            "Dynamic code execution can be unsafe. Avoid it when possible.",
-        ),
-        (
-            "broad-exception",
-            "LOW",
-            re.compile(r"^\s*except\s+Exception\s*[:,]"),
-            "Broad exception handling may hide unexpected errors.",
-        ),
-        (
-            "debug-print",
-            "LOW",
-            re.compile(r"(?<!\w)print\s*\("),
-            "Debug output may expose sensitive information in logs.",
-        ),
-    ]
-
-    for line in patch.splitlines():
-        if line.startswith("@@"):
-            match = re.search(r"\+(\d+)", line)
-            current_line = int(match.group(1)) if match else None
-            continue
-
-        if line.startswith(("+++", "---")):
-            continue
-
-        if line.startswith("+"):
-            code = line[1:]
-
-            # Don't report deliberate test examples as production issues.
-            if not is_test_file and current_line is not None:
-                for rule_id, severity, pattern, message in rules:
-                    if pattern.search(code):
-                        findings.append({
-                            "filename": filename,
-                            "line": current_line,
-                            "rule": rule_id,
-                            "severity": severity,
-                            "message": message,
-                        })
-
-            if current_line is not None:
-                current_line += 1
-
-        elif line.startswith(" "):
-            if current_line is not None:
-                current_line += 1
-
-    return findings
-
-
-
-def review_files(files: list[dict[str, Any]]) -> dict[str, Any]:
-    findings: list[dict[str, Any]] = []
-    skipped_files: list[str] = []
-    for file in files:
-        filename = file.get("filename", "unknown")
-        patch = file.get("patch")
-        if not patch:
-            skipped_files.append(filename)
-            continue
-        findings.extend(analyze_patch(filename, patch))
-
-    severity_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
-    findings.sort(key=lambda item: (
-        severity_order.get(item.get("severity", "LOW"), 3),
-        item.get("filename", ""),
-        item.get("line", 0),
-    ))
-    return {
-        "files_scanned": len(files) - len(skipped_files),
-        "files_skipped": skipped_files,
-        "finding_count": len(findings),
-        "findings": findings,
-    }
-
-
 def format_review_comment(
     review: dict[str, Any], repository: str, pr_number: int
 ) -> str:
@@ -413,8 +310,28 @@ def publish_inline_comments(
         logger.warning("Could not list existing inline comments: %s", type(error).__name__)
         existing_comments = []
 
+    # Only update inline comments owned by the identity behind this token.
+    # If GitHub cannot identify that identity, fail closed for inline comments.
+    try:
+        _, current_user = github_request(f"{GITHUB_API}/user", token)
+        bot_login = (
+            current_user.get("login", "")
+            if isinstance(current_user, dict)
+            else ""
+        )
+    except Exception as error:
+        logger.warning(
+            "Could not verify GitHub comment owner: %s",
+            type(error).__name__,
+        )
+        bot_login = ""
+
     existing_by_marker: dict[str, dict[str, Any]] = {}
     for comment in existing_comments:
+        owner = (comment.get("user") or {}).get("login")
+        if not bot_login or owner != bot_login:
+            continue
+
         body = str(comment.get("body", ""))
         start = body.find(INLINE_MARKER_PREFIX)
         if start >= 0:
@@ -440,6 +357,18 @@ def publish_inline_comments(
             })
             continue
         rule = str(finding.get("rule", "unknown-rule"))
+
+        if not bot_login:
+            result["inline_comments_skipped"].append({
+                "filename": filename,
+                "line": line,
+                "rule": rule,
+                "reason": (
+                    "Could not verify the GitHub account; "
+                    "inline comment was not created or updated"
+                ),
+            })
+            continue
 
         if line not in added_lines.get(filename, set()):
             result["inline_comments_skipped"].append({
@@ -551,6 +480,11 @@ def publish_inline_comments(
 
 def process_review(repository: str, pr_number: int) -> dict[str, Any]:
     """Background worker: fetch current PR state, review, and publish comments."""
+    if not _is_allowed_repository(repository):
+        raise ValueError("Repository is not allowlisted")
+    if type(pr_number) is not int or pr_number < 1:
+        raise ValueError("Pull request number must be a positive integer")
+
     token = get_github_token()
     pr = get_pull_request(repository, pr_number, token)
     head_sha = (pr.get("head") or {}).get("sha")
@@ -593,13 +527,31 @@ def _valid_repository(repository: Any) -> bool:
     )
 
 
+def _is_allowed_repository(repository: Any) -> bool:
+    """Validate the repository and enforce the configured repository allowlist."""
+    allowed_repo = os.environ.get(
+        "GITHUB_REPOSITORY",
+        "mdibrahim-ux/ai-code-review-agent",
+    ).strip()
+
+    return (
+        _valid_repository(repository)
+        and _valid_repository(allowed_repo)
+        and repository.casefold() == allowed_repo.casefold()
+    )
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Handle either an internal async job or a signed GitHub webhook."""
     if event.get("_async_review") is True:
         repository = event.get("repository")
         pr_number = event.get("pull_request_number")
-        if not _valid_repository(repository) or not isinstance(pr_number, int):
-            logger.error("Invalid internal review event")
+        if (
+            not _is_allowed_repository(repository)
+            or type(pr_number) is not int
+            or pr_number < 1
+        ):
+            logger.error("Invalid or non-allowlisted internal review event")
             return {"error": "Invalid internal review event"}
         try:
             return process_review(repository, pr_number)
@@ -658,14 +610,19 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     repository = (payload.get("repository") or {}).get("full_name")
     pr_number = (payload.get("pull_request") or {}).get("number")
-    if not _valid_repository(repository) or not isinstance(pr_number, int):
+    if (
+        not _valid_repository(repository)
+        or type(pr_number) is not int
+        or pr_number < 1
+    ):
         return response(400, {"error": "Missing or invalid repository or PR number"})
 
-    # Restrict the webhook to the configured project repository. This avoids
-    # allowing a validly signed payload to trigger reviews of unrelated repos.
-    allowed_repo = os.environ.get("GITHUB_REPOSITORY", "mdibrahim-ux/ai-code-review-agent")
-    if repository.lower() != allowed_repo.lower():
-        logger.warning("Ignoring webhook for non-allowlisted repository: %s", repository)
+    # Enforce the same allowlist for public webhook events and internal jobs.
+    if not _is_allowed_repository(repository):
+        logger.warning(
+            "Ignoring webhook for non-allowlisted repository: %s",
+            repository,
+        )
         return response(403, {"error": "Repository is not allowlisted"})
 
     try:
