@@ -15,13 +15,21 @@ on:
   workflow_dispatch:
     inputs:
       confirm_deployment:
-        description: "Choose yes only when you intend to update code on the existing code-review-agent Lambda."
+        description: "Choose yes only when you intend to update code on the selected existing Lambda."
         required: true
         type: choice
         options:
           - "no"
           - "yes"
         default: "no"
+      deployment_target:
+        description: "Select which existing Lambda may be updated by this manual run."
+        required: true
+        type: choice
+        options:
+          - "code-review-agent"
+          - "sentinel-dashboard-api"
+        default: "code-review-agent"
 
 permissions:
   contents: read
@@ -110,11 +118,20 @@ jobs:
 
       # Upload only for an explicitly confirmed manual deployment from main.
       - name: Upload validated Lambda package
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes' && inputs.deployment_target == 'code-review-agent'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: code-review-agent-lambda-package
           path: dist/code-review-agent-deployment-test.zip
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload validated dashboard API package
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes' && inputs.deployment_target == 'sentinel-dashboard-api'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sentinel-dashboard-api-package
+          path: dist/sentinel-dashboard-api-deployment-test.zip
           if-no-files-found: error
           retention-days: 1
 
@@ -157,8 +174,8 @@ jobs:
 
   # 4. Manually confirmed deployment to the existing Lambda
   deploy-lambda:
-    name: Deploy Lambda (Manual Confirmation)
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes'
+    name: Deploy Code Review Agent (Manual Confirmation)
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes' && inputs.deployment_target == 'code-review-agent'
     needs: [test, package]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -339,3 +356,169 @@ jobs:
             --function-name code-review-agent \
             --query '{FunctionName:FunctionName,FunctionArn:FunctionArn,Runtime:Runtime,Handler:Handler,LastUpdateStatus:LastUpdateStatus,LastModified:LastModified,CodeSha256:CodeSha256}' \
             --output json
+
+  # 5. Manually confirmed deployment of the read-only dashboard API
+  deploy-dashboard-api:
+    name: Deploy Sentinel Dashboard API (Manual Confirmation)
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes' && inputs.deployment_target == 'sentinel-dashboard-api'
+    needs: [test, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download validated dashboard API package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sentinel-dashboard-api-package
+          path: dist
+
+      - name: Verify dashboard API deployment artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import zipfile
+          from pathlib import PurePosixPath
+
+          archive_path = "dist/sentinel-dashboard-api-deployment-test.zip"
+          with zipfile.ZipFile(archive_path, "r") as archive:
+              names = archive.namelist()
+              name_set = set(names)
+              if not names or archive.testzip() is not None:
+                  raise SystemExit("ERROR: Dashboard API ZIP is empty or corrupted.")
+              if len(names) != len(name_set):
+                  raise SystemExit("ERROR: Dashboard API ZIP has duplicate entries.")
+
+              required = {
+                  "lambda_function.py",
+                  "review_engine/__init__.py",
+                  "review_engine/analyzer.py",
+                  "review_engine/rules.py",
+              }
+              missing = required - name_set
+              if missing:
+                  raise SystemExit("ERROR: Missing files: " + ", ".join(sorted(missing)))
+
+              for name in names:
+                  normalized = name.replace("\\", "/")
+                  parts = PurePosixPath(normalized).parts
+                  if normalized.startswith("/") or ".." in parts:
+                      raise SystemExit(f"ERROR: Unsafe ZIP path: {name}")
+                  if "__pycache__" in parts or normalized.endswith(".pyc"):
+                      raise SystemExit(f"ERROR: Python cache entry: {name}")
+
+          print("Dashboard API deployment ZIP validation passed.")
+          PY
+
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::065882629492:role/github-actions-code-review-agent-deploy
+          aws-region: ap-south-1
+          role-session-name: GitHubActionsDashboardApiDeploy
+          allowed-account-ids: "065882629492"
+
+      - name: Verify AWS identity and dashboard target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text)"
+          case "$CALLER_ARN" in
+            arn:aws:sts::065882629492:assumed-role/github-actions-code-review-agent-deploy/*) ;;
+            *)
+              echo "::error::Unexpected AWS caller identity."
+              exit 1
+              ;;
+          esac
+
+          FUNCTION_ARN="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api \
+            --query FunctionArn --output text)"
+          if [[ "$FUNCTION_ARN" != "arn:aws:lambda:ap-south-1:065882629492:function:sentinel-dashboard-api" ]]; then
+            echo "::error::Dashboard API target ARN did not match."
+            exit 1
+          fi
+
+          RUNTIME="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api --query Runtime --output text)"
+          HANDLER="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api --query Handler --output text)"
+          EXECUTION_ROLE="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api --query Role --output text)"
+
+          if [[ "$RUNTIME" != "python3.13" || "$HANDLER" != "lambda_function.lambda_handler" ]]; then
+            echo "::error::Unexpected dashboard API runtime or handler."
+            exit 1
+          fi
+          if [[ "$EXECUTION_ROLE" != "arn:aws:iam::065882629492:role/service-role/sentinel-dashboard-api-role-d3i1aebp" ]]; then
+            echo "::error::Unexpected dashboard Lambda execution role."
+            exit 1
+          fi
+
+          echo "Dashboard API deployment target verified: $FUNCTION_ARN"
+
+      # This is the only step that changes the dashboard API Lambda code.
+      - name: Update dashboard API Lambda code
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda update-function-code \
+            --function-name sentinel-dashboard-api \
+            --zip-file fileb://dist/sentinel-dashboard-api-deployment-test.zip \
+            --output json
+
+      - name: Wait for dashboard API update
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda wait function-updated-v2 --function-name sentinel-dashboard-api
+
+      - name: Verify deployed dashboard API package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STATUS="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api --query LastUpdateStatus --output text)"
+          if [[ "$STATUS" != "Successful" ]]; then
+            echo "::error::Dashboard Lambda update status: $STATUS"
+            exit 1
+          fi
+
+          EXPECTED_CODE_SHA="$(openssl dgst -sha256 -binary dist/sentinel-dashboard-api-deployment-test.zip | base64 -w 0)"
+          DEPLOYED_CODE_SHA="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api --query CodeSha256 --output text)"
+          if [[ "$DEPLOYED_CODE_SHA" != "$EXPECTED_CODE_SHA" ]]; then
+            echo "::error::Deployed dashboard API code does not match the validated ZIP."
+            exit 1
+          fi
+          echo "Dashboard API code checksum matches the validated artifact."
+
+      - name: Smoke test deployed dashboard API through API Gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_BASE="https://3kbsd10ue2.execute-api.ap-south-1.amazonaws.com"
+
+          curl --fail --silent --show-error --max-time 20 "$API_BASE/health" |
+            python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("status") == "ok", r; print("Health route passed.")'
+
+          PULL_REQUESTS="$(curl --fail --silent --show-error --max-time 25 "$API_BASE/pull-requests")"
+          printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); assert isinstance(r.get("pull_requests"), list), r; assert r.get("repository") == "mdibrahim-ux/ai-code-review-agent", r; print(f"Live pull-request route passed ({len(r['pull_requests'])} open PR(s)).")'
+
+          PR_NUMBER="$(printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); p=r.get("pull_requests") or []; print(p[0]["number"] if p else "")')"
+          if [[ -n "$PR_NUMBER" ]]; then
+            REVIEW_BODY="$(printf '{"pull_request_number":%s}' "$PR_NUMBER")"
+            curl --fail --silent --show-error --max-time 25 \
+              -H "Content-Type: application/json" \
+              -d "$REVIEW_BODY" "$API_BASE/review" |
+              python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("status") == "reviewed", r; assert r.get("mode") == "read-only", r; assert r.get("comments_published") is False, r; print("Read-only review route passed; no comments were published.")'
+          else
+            echo "No open PRs are available; read-only review smoke test skipped."
+          fi
