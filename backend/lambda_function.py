@@ -16,8 +16,7 @@ from typing import Any
 
 import boto3
 
-from .review_engine.analyzer import analyze_patch, review_files
-
+from .review_engine.analyzer import review_files
 
 AWS_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 PARAMETER_NAME = "/code-review-agent/github-token"
@@ -207,7 +206,8 @@ def format_review_comment(
             )
         if len(review["findings"]) > 100:
             lines.append(
-                f"- _{len(review['findings']) - 100} additional findings omitted from this summary._"
+                f"- _{len(review['findings']) - 100} additional findings "
+"omitted from this summary._"
             )
     else:
         lines.append("No issues detected by the current review rules.")
@@ -399,7 +399,10 @@ def publish_inline_comments(
                         "filename": filename,
                         "line": line,
                         "rule": rule,
-                        "reason": f"Safety cap of {MAX_INLINE_COMMENTS_PER_RUN} new inline comments reached",
+                        "reason": (
+    f"Safety cap of {MAX_INLINE_COMMENTS_PER_RUN} "
+    "new inline comments reached"
+),
                     })
                     continue
                 payload: dict[str, Any] = {
