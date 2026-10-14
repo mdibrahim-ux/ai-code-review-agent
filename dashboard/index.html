@@ -4,270 +4,966 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1e9">
-  <meta name="description" content="Sentinel — an evidence-first code review command center concept.">
-  <title>Sentinel — Code Intelligence</title>
+  <meta name="description" content="Sentinel — an evidence-first code review command center with live GitHub pull-request data and deterministic rule findings.">
+  <title>Sentinel — Code Review &amp; Diff Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-
-<style id="sentinel-theme-styles">
-/* Dark mode is an optional visual layer. The original light theme remains the default. */
-.theme-toggle{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  min-height:42px;padding:0 13px;border:1px solid #d8d5ca;border-radius:9px;
-  background:#fffdf7;color:#252525;font:600 12px "DM Mono",monospace;
-  cursor:pointer;transition:background .2s,color .2s,border-color .2s,transform .2s;
-}
-.theme-toggle:hover{transform:translateY(-1px)}
-.theme-toggle:focus-visible{outline:3px solid #6687ff;outline-offset:3px}
-.theme-icon{font-size:17px;line-height:1}
-body.dark-mode{
-  color-scheme:dark;
-  --dm-bg:#10131c;--dm-panel:#191e2a;--dm-panel-2:#202737;--dm-border:#343d50;
-  --dm-text:#edf1fb;--dm-muted:#a5afc2;--dm-blue:#315bff;--dm-yellow:#ffdc45;
-  background:var(--dm-bg)!important;color:var(--dm-text)!important;
-}
-body.dark-mode .app-shell,
-body.dark-mode .main-content{background:var(--dm-bg)!important;color:var(--dm-text)!important}
-body.dark-mode .sidebar,
-body.dark-mode .topbar,
-body.dark-mode .queue-panel,
-body.dark-mode .review-card,
-body.dark-mode .content-panel,
-body.dark-mode .engine-card,
-body.dark-mode .command-palette,
-body.dark-mode .dossier-modal,
-body.dark-mode .modal-backdrop,
-body.dark-mode .palette-backdrop{
-  background-color:var(--dm-panel)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
-}
-body.dark-mode .metric-card,
-body.dark-mode .review-workbench,
-body.dark-mode .queue-item,
-body.dark-mode .evidence-chain,
-body.dark-mode .chain-step,
-body.dark-mode .dossier-body,
-body.dark-mode .dossier-copy-block,
-body.dark-mode .palette-option,
-body.dark-mode .palette-input-wrap,
-body.dark-mode .modal-file-list>div{
-  background-color:var(--dm-panel-2)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
-}
-body.dark-mode h1,body.dark-mode h2,body.dark-mode h3,body.dark-mode h4,
-body.dark-mode strong,body.dark-mode b,body.dark-mode .brand-name,
-body.dark-mode .nav-link,body.dark-mode .queue-title,
-body.dark-mode .review-title-row h3,body.dark-mode .panel-header h2,
-body.dark-mode .event-copy b,body.dark-mode .metric-value,
-body.dark-mode .detail-title,body.dark-mode .dossier-modal h2,
-body.dark-mode .dossier-modal h3,body.dark-mode .palette-option b{
-  color:var(--dm-text)
-}
-body.dark-mode p,body.dark-mode small,body.dark-mode .breadcrumbs,
-body.dark-mode .section-header p,body.dark-mode .queue-description,
-body.dark-mode .metric-foot,body.dark-mode .footprint-name,
-body.dark-mode .event-copy p,body.dark-mode .dossier-modal p,
-body.dark-mode .profile-identity small,body.dark-mode .sidebar-stamp,
-body.dark-mode .nav-label,body.dark-mode .context-kicker,
-body.dark-mode .review-repo-label,body.dark-mode .section-eyebrow{
-  color:var(--dm-muted)
-}
-body.dark-mode .nav-link.active,
-body.dark-mode .queue-item.selected{
-  background:#28334b!important;color:#fff!important;border-color:#4968ff!important
-}
-body.dark-mode .nav-link:hover,body.dark-mode .queue-item:hover,
-body.dark-mode .palette-option:hover{background:#29344b!important;color:#fff!important}
-body.dark-mode .search-trigger,body.dark-mode .clock-chip,
-body.dark-mode .workspace-switch,body.dark-mode .profile-switch,
-body.dark-mode .plain-icon-button,body.dark-mode .text-button,
-body.dark-mode .button-outline-light,body.dark-mode .inline-action,
-body.dark-mode .timeline-action,body.dark-mode .search-trigger input,
-body.dark-mode .palette-input-wrap input{
-  background:var(--dm-panel-2)!important;color:var(--dm-text)!important;border-color:var(--dm-border)!important
-}
-body.dark-mode .button-ink{background:#f0f2f8!important;color:#151923!important}
-body.dark-mode .button-yellow{background:var(--dm-yellow)!important;color:#171717!important}
-body.dark-mode .hero-panel{box-shadow:0 18px 55px #0005}
-body.dark-mode .page-footer{border-color:var(--dm-border)!important;color:var(--dm-muted)!important}
-body.dark-mode .review-divider,body.dark-mode .queue-panel-footer,
-body.dark-mode .dossier-footer{border-color:var(--dm-border)!important}
-body.dark-mode .footprint-track{background:#343d50!important}
-body.dark-mode .evidence-empty,body.dark-mode .quality-banner{color:var(--dm-text)}
-body.dark-mode .theme-toggle{background:#202737;color:#f4f6ff;border-color:#46516a}
-body.dark-mode .theme-toggle:hover{background:#2b354a}
-body.dark-mode input,body.dark-mode textarea,body.dark-mode select{
-  background:#202737!important;color:#edf1fb!important;border-color:#46516a!important
-}
-body.dark-mode kbd{background:#252d3d!important;color:#dbe3f4!important;border-color:#46516a!important}
-@media(max-width:640px){.theme-label{display:none}.theme-toggle{width:42px;padding:0}}
-</style>
-
-
-<style id="sample-metrics-disclosure">
-.sample-metrics-notice{
-  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  margin:18px 0 10px;padding:12px 15px;border:1px dashed #b8a64d;
-  border-radius:8px;background:#fff6c9;color:#3d3514;
-  font:500 12px/1.5 "DM Mono",monospace;
-}
-.sample-metrics-notice strong{font-weight:700;letter-spacing:.05em}
-body.dark-mode .sample-metrics-notice{
-  background:#302b1b;color:#ffeb9a;border-color:#8c7935
-}
-</style>
-
 </head>
 <body>
   <a class="skip-link" href="#overview">Skip to dashboard</a>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
+    <!-- ─────────────────────── Sidebar Navigation ─────────────────────── -->
+    <aside class="sidebar" id="sidebar" aria-label="Primary Sidebar">
       <a class="brand" href="#overview" aria-label="Sentinel command center">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
         <span class="brand-name">SENTINEL<span>CODE INTELLIGENCE</span></span>
       </a>
-      <button class="workspace-switch" id="workspaceSwitch" aria-label="Workspace selector">
-        <span class="workspace-avatar">M</span><span class="workspace-label"><small>WORKSPACE</small><b>Personal / Lab</b></span><span class="switch-caret">⌄</span>
-      </button>
+
+      <div class="workspace-wrap">
+        <button class="workspace-switch" id="workspaceSwitch" type="button" aria-label="Workspace selector" aria-expanded="false" aria-controls="workspacePopover">
+          <span class="workspace-avatar" id="workspaceAvatar">M</span>
+          <span class="workspace-label">
+            <small>WORKSPACE</small>
+            <b id="workspaceName">Personal / Lab</b>
+          </span>
+          <span class="switch-caret" aria-hidden="true">⌄</span>
+        </button>
+        <div class="workspace-popover hidden" id="workspacePopover" role="menu" aria-label="Select workspace">
+          <button class="workspace-option active" type="button" data-ws="Personal / Lab" data-avatar="M">
+            <div>
+              <b>Personal / Lab</b>
+              <small>mdibrahim-ux · 4 repos</small>
+            </div>
+            <span class="workspace-option-badge">ACTIVE</span>
+          </button>
+          <button class="workspace-option" type="button" data-ws="GitHub App / Prod" data-avatar="G">
+            <div>
+              <b>GitHub App / Prod</b>
+              <small>ap-south-1 · Read-only</small>
+            </div>
+            <span class="workspace-option-badge">API</span>
+          </button>
+        </div>
+      </div>
+
       <div class="nav-label">YOUR WORKSPACE <span>01—04</span></div>
       <nav class="primary-nav" aria-label="Main navigation">
-        <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span><span>Command center</span><kbd>01</kbd></a>
-        <a class="nav-link" href="#pull-requests"><span class="nav-icon">⑂</span><span>Pull requests</span><span class="nav-count">04</span></a>
-        <a class="nav-link" href="#findings"><span class="nav-icon">⌁</span><span>Evidence explorer</span></a>
-        <a class="nav-link" href="#timeline"><span class="nav-icon">◷</span><span>Flight recorder</span><i class="nav-live" aria-label="Demo activity"></i></a>
+        <a class="nav-link active" href="#overview"><span class="nav-icon" aria-hidden="true">▦</span><span>Command center</span><kbd>01</kbd></a>
+        <a class="nav-link" href="#pull-requests"><span class="nav-icon" aria-hidden="true">⑂</span><span>Pull requests</span><span class="nav-count" id="navPrCount">04</span></a>
+        <a class="nav-link" href="#findings"><span class="nav-icon" aria-hidden="true">⌁</span><span>Evidence &amp; diffs</span><span class="nav-count count-warn" id="navFindingCount">04</span></a>
+        <a class="nav-link" href="#timeline"><span class="nav-icon" aria-hidden="true">◷</span><span>Flight recorder</span><i class="nav-live" aria-label="Activity stream"></i></a>
       </nav>
-      <div class="nav-label nav-label-spaced">SYSTEMS <span>05—06</span></div>
+
+      <div class="nav-label nav-label-spaced">SYSTEMS <span>05—07</span></div>
       <nav class="primary-nav" aria-label="System navigation">
-        <a class="nav-link" href="#repositories"><span class="nav-icon">⌘</span><span>Repositories</span></a>
-        <a class="nav-link" href="#quality"><span class="nav-icon">⊹</span><span>Quality signals</span></a>
+        <a class="nav-link" href="#analytics"><span class="nav-icon" aria-hidden="true">◫</span><span>Analytics &amp; rules</span></a>
+        <a class="nav-link" href="#repositories-section"><span class="nav-icon" aria-hidden="true">⌘</span><span>Repositories</span></a>
+        <a class="nav-link" href="#quality"><span class="nav-icon" aria-hidden="true">⊹</span><span>Quality signals</span></a>
       </nav>
+
       <div class="sidebar-fill"></div>
-      <div class="engine-card">
-        <div class="engine-card-head"><span class="engine-symbol">✳</span><span>ENGINE STATUS</span><strong><i></i> READY</strong></div>
-        <div class="engine-rail"><span></span></div>
-        <div class="engine-card-foot"><span>Rule engine online</span><span>v0.1.0</span></div>
+
+      <div class="engine-card" role="region" aria-label="Review Engine Status">
+        <div class="engine-card-head">
+          <span class="engine-symbol" aria-hidden="true">✳</span>
+          <span>ENGINE STATUS</span>
+          <strong id="sidebarEngineState"><i></i> READY</strong>
+        </div>
+        <div class="engine-rail" aria-hidden="true"><span></span></div>
+        <div class="engine-card-foot">
+          <span id="sidebarEngineSub">Deterministic Rule Engine</span>
+          <span>v0.2.0</span>
+        </div>
       </div>
-      <button class="profile-switch" id="profileSwitch"><span class="profile-avatar">MI</span><span class="profile-identity"><b>Mohammed Ibrahim</b><small>Builder workspace</small></span><span class="profile-more">···</span></button>
+
+      <button class="profile-switch" id="profileSwitch" type="button" aria-label="User profile and shortcuts">
+        <span class="profile-avatar">MI</span>
+        <span class="profile-identity">
+          <b>Mohammed Ibrahim</b>
+          <small>Lead Maintainer · Read-Only API</small>
+        </span>
+        <span class="profile-more" aria-hidden="true">···</span>
+      </button>
       <div class="sidebar-stamp">BUILT TO FIND THE SIGNAL.<br>DESIGNED TO SHOW THE PROOF.</div>
     </aside>
 
+    <!-- ─────────────────────── Main Dashboard Content ─────────────────────── -->
     <main class="main-content" id="overview">
       <header class="topbar">
-        <div class="breadcrumbs"><span>Workspace</span><b>/</b><strong>Command center</strong><span class="preview-label"><i></i> LOCAL PREVIEW</span></div>
-        <div class="topbar-actions"><div class="clock-chip"><span class="clock-diamond">◆</span><span id="clock">--:--:--</span><small>IST</small></div><button class="search-trigger" id="commandOpen" aria-label="Open command menu"><span class="search-glass">⌕</span><span>Quick search</span><kbd>Ctrl K</kbd></button><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span></button><button class="top-avatar" id="openModelDetails" aria-label="Open Sentinel model details">S<span class="avatar-indicator"></span></button></div>
+        <div class="breadcrumbs" aria-label="Breadcrumb">
+          <span id="breadcrumbWs">Workspace</span>
+          <b>/</b>
+          <strong id="breadcrumbSection">Command center</strong>
+          <span class="preview-label" id="connectionBadge"><i></i> <span id="connectionText">CHECKING API...</span></span>
+        </div>
+        <div class="topbar-actions">
+          <button class="mode-switch-pill" id="modeSwitchBtn" type="button" title="Switch between Live AWS GitHub API and Curated Sample Dataset">
+            <span class="mode-dot sample" id="modeDot"></span>
+            <span id="modeLabel">Source: Sample</span>
+          </button>
+          <div class="clock-chip" aria-label="Current India Standard Time">
+            <span class="clock-diamond" aria-hidden="true">◆</span>
+            <span id="clock">--:--:--</span>
+            <small>IST</small>
+          </div>
+          <button class="search-trigger" id="commandOpen" type="button" aria-label="Open command menu">
+            <span class="search-glass" aria-hidden="true">⌕</span>
+            <span>Quick command</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+            <span class="theme-icon" aria-hidden="true">☾</span>
+            <span class="theme-label">Dark mode</span>
+          </button>
+          <button class="top-avatar" id="openModelDetails" type="button" aria-label="Open Sentinel review dossier">
+            S<span class="avatar-indicator"></span>
+          </button>
+        </div>
       </header>
 
+      <!-- ─────────────────────── Hero Cover Panel ─────────────────────── -->
       <section class="hero-panel" aria-labelledby="heroTitle">
         <div class="hero-paper-texture" aria-hidden="true"></div>
-        <div class="hero-topline"><span class="hero-index">FIELD NOTES <b>NO. 001</b></span><span class="hero-top-status"><i></i> REVIEW SYSTEM / STANDING BY</span></div>
+        <div class="hero-topline">
+          <span class="hero-index">FIELD DOSSIER <b>NO. 002</b> · LIVE GITHUB + DETERMINISTIC REVIEW WORKBENCH</span>
+          <span class="hero-top-status"><i></i> <span id="heroStatusText">REVIEW SYSTEM / STANDING BY</span></span>
+        </div>
         <div class="hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-slash">//</span> EVIDENCE-FIRST CODE REVIEW</p>
+            <p class="eyebrow"><span class="eyebrow-slash">//</span> EVIDENCE-FIRST CODE REVIEW &amp; DIFF INTELLIGENCE</p>
             <h1 id="heroTitle">Ship with<br><span>conviction<span class="period">.</span></span></h1>
-            <p class="hero-summary">Good reviews do more than flag a line. They show you <strong>what changed, why it matters, and where the proof lives.</strong></p>
-            <div class="hero-cta-row"><button class="button button-yellow" id="simulateReview"><span class="button-icon">▶</span><span>Run code review</span><span class="button-arrow">↗</span></button><button class="button button-outline-light" id="jumpTimeline"><span class="button-icon">↘</span> Flight recorder</button></div>
-            <div class="hero-proofline"><span><b>01</b> Deterministic rules</span><span><b>02</b> Traceable findings</span><span class="demo-tag"><i></i> SAMPLE DATA</span></div>
+            <p class="hero-summary">Good reviews do more than flag a line. They show you <strong>what changed, why it matters, and where the evidence lives</strong>—with deterministic security and code-quality rules and traceable line-level findings.</p>
+            <div class="hero-cta-row">
+              <button class="button button-yellow" id="simulateReview" type="button">
+                <span class="button-icon" aria-hidden="true">▶</span>
+                <span>Run code review</span>
+                <span class="button-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="button button-outline-light" id="jumpFindings" type="button">
+                <span class="button-icon" aria-hidden="true">⌁</span> Inspect diffs &amp; findings
+              </button>
+              <button class="button button-outline-light" id="jumpTimeline" type="button">
+                <span class="button-icon" aria-hidden="true">↘</span> Flight recorder
+              </button>
+            </div>
+            <div class="hero-proofline">
+              <span><b>01</b> Deterministic security &amp; quality rules</span>
+              <span><b>02</b> Traceable file &amp; line findings</span>
+              <span class="demo-tag"><i aria-hidden="true"></i> <span id="heroDataBadge">TRANSPARENT DATA MODE</span></span>
+            </div>
           </div>
+
           <div class="hero-illustration" aria-label="Stylized Sentinel signal illustration">
             <div class="illustration-caption caption-top"><span>FIG. A</span><b>SIGNAL / EVIDENCE</b></div>
             <div class="comic-sunburst" aria-hidden="true"></div>
-            <div class="orbit-figure orbit-outer" aria-hidden="true"><span class="orbit-dot dot-a"></span><span class="orbit-dot dot-b"></span><span class="orbit-dot dot-c"></span></div>
-            <div class="orbit-figure orbit-inner" aria-hidden="true"><span class="orbit-notch"></span></div>
-            <div class="signal-card"><div class="signal-card-top"><span>REVIEW SIGNAL</span><span class="signal-card-number">#001</span></div><div class="signal-monogram">S<span>!</span></div><div class="signal-card-bottom"><b>PROOF BEFORE MERGE</b><span class="signal-card-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div></div>
-            <div class="float-sticker sticker-check"><span>✓</span><div><b>TRACEABLE</b><small>Evidence attached</small></div></div>
-            <div class="float-sticker sticker-signal"><span class="sticker-signal-icon">!</span><div><b>RISK FOUND?</b><small>Show the reason.</small></div></div>
-            <div class="illustration-caption caption-bottom"><span>ENGINE BUILD</span><b>0.1.0 / PREVIEW</b></div>
+            <div class="orbit-figure orbit-outer" aria-hidden="true">
+              <span class="orbit-dot dot-a"></span>
+              <span class="orbit-dot dot-b"></span>
+              <span class="orbit-dot dot-c"></span>
+            </div>
+            <div class="orbit-figure orbit-inner" aria-hidden="true">
+              <span class="orbit-notch"></span>
+            </div>
+            <div class="signal-card">
+              <div class="signal-card-top"><span>REVIEW SIGNAL</span><span class="signal-card-number" id="heroCardPr">#024</span></div>
+              <div class="signal-monogram">S<span>!</span></div>
+              <div class="signal-card-bottom">
+                <b>PROOF BEFORE MERGE</b>
+                <span class="signal-card-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+            </div>
+            <div class="float-sticker sticker-check">
+              <span>✓</span>
+              <div><b>TRACEABLE</b><small>File + line attached</small></div>
+            </div>
+            <div class="float-sticker sticker-signal">
+              <span class="sticker-signal-icon">!</span>
+              <div><b>RISK FOUND?</b><small>Inspect diff &amp; fix.</small></div>
+            </div>
+            <div class="illustration-caption caption-bottom"><span>ENGINE BUILD</span><b>0.2.0 / READ-ONLY</b></div>
           </div>
         </div>
-        <div class="hero-footer"><span><i class="footer-square"></i> ENGINE STATUS <b>READY</b></span><span>LAST SYNC <b>JUST NOW</b></span><span class="hero-footer-slogan">NO BLACK BOXES. JUST BETTER QUESTIONS.</span></div>
+        <div class="hero-footer">
+          <span><i class="footer-square" aria-hidden="true"></i> ENGINE STATUS <b id="heroFooterStatus">READY</b></span>
+          <span>API GATEWAY <b>ap-south-1 (READ-ONLY)</b></span>
+          <span class="hero-footer-slogan">NO BLACK BOXES. JUST BETTER QUESTIONS.</span>
+        </div>
       </section>
 
-      <div class="sample-metrics-notice" role="note">
-        <strong>DEMO / SAMPLE METRICS</strong>
-        <span>128 reviews, 46 findings, 8 high-risk signals and 82% are illustrative design values, not live production statistics.</span>
+      <!-- ─────────────────────── Telemetry Disclosure & Metrics Strip ─────────────────────── -->
+      <div class="sample-metrics-notice" role="region" aria-label="Telemetry source disclosure">
+        <div class="sample-metrics-notice-left">
+          <strong id="telemetryNoticeBadge">DEMO / SAMPLE METRICS</strong>
+          <span id="telemetryNoticeText">128 reviews, 46 findings, 8 high-risk signals, and 82% are illustrative 7-day benchmark values. Switch to "Active Queue" to compute live totals from the loaded PR queue.</span>
+        </div>
+        <div class="telemetry-mode-btns" role="group" aria-label="Metrics calculation mode">
+          <button class="telemetry-tab active" id="metricsModeBenchmark" type="button">7-Day Benchmark (Sample)</button>
+          <button class="telemetry-tab" id="metricsModeQueue" type="button">Active Queue Summary</button>
+        </div>
       </div>
-      <section class="metrics-grid" aria-label="Sample review statistics">
-        <article class="metric-card metric-blue reveal-item"><div class="metric-top"><span>SAMPLE REVIEWS PROCESSED</span><span class="metric-glyph">↗</span></div><div class="metric-value" data-count="128">0</div><div class="metric-foot"><span class="metric-chip chip-white">+12.8%</span><span>over the previous 7 days</span><div class="spark-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><span class="metric-index">01</span></article>
-        <article class="metric-card metric-yellow reveal-item"><div class="metric-top"><span>SAMPLE FINDINGS SURFACED</span><span class="metric-glyph">⌁</span></div><div class="metric-value" data-count="46">0</div><div class="metric-foot"><span class="metric-underline">Across 128 reviews</span><span>rule matches</span></div><div class="metric-band metric-band-orange"></div><span class="metric-index">02</span></article>
-        <article class="metric-card metric-red reveal-item"><div class="metric-top"><span>SAMPLE HIGH-RISK SIGNALS</span><span class="metric-glyph">!</span></div><div class="metric-value" data-count="8">0</div><div class="metric-foot"><span class="metric-underline">2 critical · 6 high</span><span>need attention</span></div><div class="risk-blocks" aria-label="8 high risk signals"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="metric-index">03</span></article>
-        <article class="metric-card metric-mint reveal-item"><div class="metric-top"><span>SAMPLE CLEAN REVIEW RATE</span><span class="metric-glyph">✓</span></div><div class="metric-value">82<span class="metric-percent">%</span></div><div class="metric-foot"><span class="metric-chip chip-ink">↑ 4.2%</span><span>no findings detected</span></div><div class="clean-meter"><span></span></div><span class="metric-index">04</span></article>
+
+      <section class="metrics-grid" aria-label="Review statistics">
+        <article class="metric-card metric-blue reveal-item">
+          <div>
+            <div class="metric-top"><span id="metricLabel1">SAMPLE REVIEWS PROCESSED</span><span class="metric-glyph" aria-hidden="true">↗</span></div>
+            <div class="metric-value" id="metricVal1" data-count="128">128</div>
+            <div class="metric-foot">
+              <span class="metric-chip chip-white" id="metricChip1">+12.8%</span>
+              <span id="metricSub1">over the previous 7 days</span>
+            </div>
+          </div>
+          <div class="spark-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <span class="metric-index">01</span>
+        </article>
+
+        <article class="metric-card metric-yellow reveal-item">
+          <div>
+            <div class="metric-top"><span id="metricLabel2">SAMPLE FINDINGS SURFACED</span><span class="metric-glyph" aria-hidden="true">⌁</span></div>
+            <div class="metric-value" id="metricVal2" data-count="46">46</div>
+            <div class="metric-foot">
+              <span class="metric-underline" id="metricChip2">Across 128 reviews</span>
+              <span id="metricSub2">configured rule matches</span>
+            </div>
+          </div>
+          <div class="metric-band metric-band-orange" aria-hidden="true"></div>
+          <span class="metric-index">02</span>
+        </article>
+
+        <article class="metric-card metric-red reveal-item">
+          <div>
+            <div class="metric-top"><span id="metricLabel3">SAMPLE HIGH-RISK SIGNALS</span><span class="metric-glyph" aria-hidden="true">!</span></div>
+            <div class="metric-value" id="metricVal3" data-count="8">8</div>
+            <div class="metric-foot">
+              <span class="metric-underline" id="metricChip3">2 critical · 6 high</span>
+              <span id="metricSub3">require manual verification</span>
+            </div>
+          </div>
+          <div class="risk-blocks" aria-label="High risk signal ratio"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <span class="metric-index">03</span>
+        </article>
+
+        <article class="metric-card metric-mint reveal-item">
+          <div>
+            <div class="metric-top"><span id="metricLabel4">SAMPLE CLEAN REVIEW RATE</span><span class="metric-glyph" aria-hidden="true">✓</span></div>
+            <div class="metric-value" id="metricVal4">82<span class="metric-percent">%</span></div>
+            <div class="metric-foot">
+              <span class="metric-chip chip-ink" id="metricChip4">↑ 4.2%</span>
+              <span id="metricSub4">zero blocking findings</span>
+            </div>
+          </div>
+          <div class="clean-meter" aria-hidden="true"><span id="cleanMeterBar"></span></div>
+          <span class="metric-index">04</span>
+        </article>
       </section>
 
-      <section class="section-header" id="pull-requests"><div class="section-header-left"><div class="section-eyebrow"><span>01</span> INCOMING SIGNAL</div><h2>The review queue <span class="section-count">04</span></h2><p>Changes in motion. Evidence before assumptions.</p></div><button class="text-button" id="viewAllReviews">View every review <span>↗</span></button></section>
-      <section class="review-workbench" id="repositories">
+      <!-- ─────────────────────── 01: Pull Request Review Workbench ─────────────────────── -->
+      <section class="section-header" id="pull-requests">
+        <div class="section-header-left">
+          <div class="section-eyebrow"><span>01</span> INCOMING SIGNAL &amp; PULL REQUEST QUEUE</div>
+          <h2>The review queue <span class="section-count" id="queueHeaderCount">04</span></h2>
+          <p>Search, filter, and inspect open pull requests. Select a pull request to inspect its available file footprint, code findings, and illustrative sample diffs.</p>
+        </div>
+        <div class="section-actions">
+          <button class="text-button" id="syncLiveBtn" type="button" title="Fetch open pull requests from the live AWS GitHub endpoint">↻ Sync live GitHub PRs</button>
+          <button class="text-button" id="viewAllReviews" type="button">Reset filters &amp; show all <span>↗</span></button>
+        </div>
+      </section>
+
+      <section class="review-workbench" id="repositories" aria-label="Pull request workbench">
+        <!-- Queue Panel -->
         <div class="queue-panel" id="queueList" aria-label="Pull request review queue">
-          <div class="queue-panel-heading"><span>INBOX <b>04</b></span><span class="queue-sort">SORT: RECENT <i>⌄</i></span></div>
-          <button class="queue-item selected" data-review="0"><span class="repo-symbol symbol-github">⌘</span><span class="queue-copy"><span class="queue-title">ai-code-review-agent <small>#1</small></span><span class="queue-description">mdibrahim-ux · Update review rules</span><span class="queue-badges"><i class="badge badge-clean">CLEAN</i><i class="badge badge-files">5 FILES</i></span></span><span class="queue-count clean-count"><b>00</b><small>signals</small></span><span class="queue-indicator">↗</span></button>
-          <button class="queue-item" data-review="1"><span class="repo-symbol symbol-purple">V</span><span class="queue-copy"><span class="queue-title">valyrian-craft <small>#24</small></span><span class="queue-description">mdibrahim-ux · Cart state handling</span><span class="queue-badges"><i class="badge badge-risk">HIGH RISK</i><i class="badge badge-files">8 FILES</i></span></span><span class="queue-count risk-count"><b>03</b><small>signals</small></span><span class="queue-indicator">↗</span></button>
-          <button class="queue-item" data-review="2"><span class="repo-symbol symbol-blue">S</span><span class="queue-copy"><span class="queue-title">student-portal <small>#18</small></span><span class="queue-description">demo-org · Input validation</span><span class="queue-badges"><i class="badge badge-review">REVIEW</i><i class="badge badge-files">3 FILES</i></span></span><span class="queue-count warn-count"><b>01</b><small>signal</small></span><span class="queue-indicator">↗</span></button>
-          <button class="queue-item" data-review="3"><span class="repo-symbol symbol-green">A</span><span class="queue-copy"><span class="queue-title">api-service <small>#42</small></span><span class="queue-description">demo-org · Refactor request handler</span><span class="queue-badges"><i class="badge badge-clean">CLEAN</i><i class="badge badge-files">4 FILES</i></span></span><span class="queue-count clean-count"><b>00</b><small>signals</small></span><span class="queue-indicator">↗</span></button>
-          <div class="queue-panel-footer"><span><i></i> QUEUE IS SIMULATED</span><span>4 OF 4 SHOWN</span></div>
+          <div class="queue-panel-heading">
+            <span>INBOX <b id="inboxCountBadge">04</b></span>
+            <span id="queueSourceTag">SOURCE: CURATED + LIVE API</span>
+          </div>
+
+          <div class="queue-toolbar">
+            <div class="queue-search-row">
+              <div class="queue-search-wrap">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" id="queueSearchInput" class="queue-search-input" placeholder="Search PR #, title, repo, author..." aria-label="Search pull requests">
+                <button type="button" id="queueSearchClear" class="queue-search-clear hidden" aria-label="Clear search">×</button>
+              </div>
+              <select id="queueSortSelect" class="queue-sort-select" aria-label="Sort pull requests">
+                <option value="recent">SORT: RECENT</option>
+                <option value="signals">SORT: SIGNALS</option>
+                <option value="files">SORT: FILES</option>
+                <option value="pr">SORT: PR #</option>
+              </select>
+            </div>
+            <div class="queue-filter-pills" role="group" aria-label="Filter pull requests by status">
+              <button type="button" class="filter-pill active" data-filter="all">ALL (4)</button>
+              <button type="button" class="filter-pill" data-filter="risk">HIGH RISK</button>
+              <button type="button" class="filter-pill" data-filter="warn">NEEDS REVIEW</button>
+              <button type="button" class="filter-pill" data-filter="clean">CLEAN</button>
+            </div>
+          </div>
+
+          <div class="queue-items-container" id="queueItemsContainer">
+            <button class="queue-item selected" data-review="0" type="button">
+              <span class="repo-symbol symbol-github">⌘</span>
+              <span class="queue-copy">
+                <span class="queue-title">ai-code-review-agent <small>#1</small></span>
+                <span class="queue-description">mdibrahim-ux · Update review rules</span>
+                <span class="queue-badges"><i class="badge badge-clean">CLEAN</i><i class="badge badge-files">5 FILES</i></span>
+              </span>
+              <span class="queue-count clean-count"><b>00</b><small>signals</small></span>
+              <span class="queue-indicator">↗</span>
+            </button>
+            <button class="queue-item" data-review="1" type="button">
+              <span class="repo-symbol symbol-purple">V</span>
+              <span class="queue-copy">
+                <span class="queue-title">valyrian-craft <small>#24</small></span>
+                <span class="queue-description">mdibrahim-ux · Cart state handling</span>
+                <span class="queue-badges"><i class="badge badge-risk">HIGH RISK</i><i class="badge badge-files">8 FILES</i></span>
+              </span>
+              <span class="queue-count risk-count"><b>03</b><small>signals</small></span>
+              <span class="queue-indicator">↗</span>
+            </button>
+            <button class="queue-item" data-review="2" type="button">
+              <span class="repo-symbol symbol-blue">S</span>
+              <span class="queue-copy">
+                <span class="queue-title">student-portal <small>#18</small></span>
+                <span class="queue-description">demo-org · Input validation</span>
+                <span class="queue-badges"><i class="badge badge-review">REVIEW</i><i class="badge badge-files">3 FILES</i></span>
+              </span>
+              <span class="queue-count warn-count"><b>01</b><small>signal</small></span>
+              <span class="queue-indicator">↗</span>
+            </button>
+            <button class="queue-item" data-review="3" type="button">
+              <span class="repo-symbol symbol-green">A</span>
+              <span class="queue-copy">
+                <span class="queue-title">api-service <small>#42</small></span>
+                <span class="queue-description">demo-org · Refactor request handler</span>
+                <span class="queue-badges"><i class="badge badge-clean">CLEAN</i><i class="badge badge-files">4 FILES</i></span>
+              </span>
+              <span class="queue-count clean-count"><b>00</b><small>signals</small></span>
+              <span class="queue-indicator">↗</span>
+            </button>
+          </div>
+
+          <div class="queue-panel-footer">
+            <span><i></i> <span id="queueFooterMode">CURATED + LIVE QUEUE</span></span>
+            <span id="queueFooterCount">4 OF 4 SHOWN</span>
+          </div>
         </div>
 
+        <!-- Selected Review Detail Card -->
         <article class="review-card" id="reviewDetail" aria-live="polite">
-          <div class="review-card-top"><div class="review-context"><span class="context-kicker">SELECTED REVIEW</span><span class="context-slash">/</span><span id="detailPR">PULL REQUEST #1</span></div><button class="plain-icon-button" id="detailMenu" aria-label="More review options">···</button></div>
-          <div class="review-title-row"><div><div class="review-repo-label">REPOSITORY DOSSIER</div><h3 id="detailRepo">ai-code-review-agent</h3><p id="detailDescription">Update review rules and filtering</p></div><span class="status-label clean" id="detailStatus"><i></i> CLEAN</span></div>
-          <div class="review-stats"><div><span>FILES CHANGED</span><b id="detailFiles">05</b></div><div><span>LINES ADDED</span><b id="detailAdded">+142</b></div><div><span>LINES REMOVED</span><b id="detailRemoved">−38</b></div><div><span>REVIEW TIME</span><b id="detailTime">4.3<span>s</span></b></div></div>
-          <div class="review-divider"></div>
-          <div class="footprint-heading"><span>CHANGE FOOTPRINT</span><span>BY FILE TYPE <b>↘</b></span></div>
-          <div class="footprint"><div class="footprint-row"><span class="filetype type-py">PY</span><span class="footprint-name">Python</span><div class="footprint-track"><i style="width:74%"></i></div><span class="footprint-count">03</span></div><div class="footprint-row"><span class="filetype type-md">MD</span><span class="footprint-name">Markdown</span><div class="footprint-track"><i class="violet-fill" style="width:32%"></i></div><span class="footprint-count">01</span></div><div class="footprint-row"><span class="filetype type-json">{ }</span><span class="footprint-name">Config</span><div class="footprint-track"><i class="mint-fill" style="width:20%"></i></div><span class="footprint-count">01</span></div></div>
-          <div class="review-card-bottom"><div class="review-person-stack"><span>MI</span><span>AI</span></div><span>Reviewed by <b>Sentinel engine</b></span><button class="button button-ink" id="inspectReview">Open review dossier <span>↗</span></button></div>
+          <div class="review-card-top">
+            <div class="review-context">
+              <span class="context-kicker">SELECTED REVIEW</span>
+              <span class="context-slash">/</span>
+              <span id="detailPR">PULL REQUEST #1</span>
+              <span class="context-slash">·</span>
+              <span id="detailAuthor">@mdibrahim-ux</span>
+            </div>
+            <div class="review-top-controls">
+              <span class="branch-pill" id="detailBranch">rules/v2-filter → main</span>
+              <button class="plain-icon-button" id="detailMenu" type="button" aria-label="Open full review dossier" title="Open review dossier">···</button>
+            </div>
+          </div>
+
+          <div class="review-title-row">
+            <div>
+              <div class="review-repo-label">REPOSITORY DOSSIER · <span id="detailUpdated">Updated 14m ago</span></div>
+              <h3 id="detailRepo">ai-code-review-agent</h3>
+              <p id="detailDescription">Update review rules and test file filtering pipeline</p>
+            </div>
+            <span class="status-label clean" id="detailStatus"><i></i> CLEAN</span>
+          </div>
+
+          <div class="review-stats">
+            <div><span>FILES SCANNED</span><b id="detailFiles">05</b></div>
+            <div><span>LINES ADDED</span><b class="stat-added" id="detailAdded">+142</b></div>
+            <div><span>LINES REMOVED</span><b class="stat-removed" id="detailRemoved">−38</b></div>
+            <div><span>REVIEW TIME</span><b id="detailTime">4.3<span>s</span></b></div>
+          </div>
+
+          <div class="footprint-heading">
+            <span>CHANGE FOOTPRINT BY LANGUAGE</span>
+            <span id="detailFindingSummary">0 SIGNALS DETECTED <b>↘</b></span>
+          </div>
+          <div class="footprint" id="detailFootprint">
+            <div class="footprint-row"><span class="filetype type-py">PY</span><span class="footprint-name">Python</span><div class="footprint-track"><i style="width:74%"></i></div><span class="footprint-count">03</span></div>
+            <div class="footprint-row"><span class="filetype type-md">MD</span><span class="footprint-name">Markdown</span><div class="footprint-track"><i class="violet-fill" style="width:32%"></i></div><span class="footprint-count">01</span></div>
+            <div class="footprint-row"><span class="filetype type-json">{ }</span><span class="footprint-name">Config</span><div class="footprint-track"><i class="mint-fill" style="width:20%"></i></div><span class="footprint-count">01</span></div>
+          </div>
+
+          <div class="changed-files-box">
+            <div class="changed-files-title">
+              <span>CHANGED FILES / FINDING LOCATIONS (SAMPLE DIFFS ARE ILLUSTRATIVE)</span>
+              <span id="changedFilesCountLabel">5 FILES</span>
+            </div>
+            <div class="changed-files-list" id="changedFilesList"></div>
+          </div>
+
+          <div class="review-card-bottom">
+            <div class="review-person-stack"><span>MI</span><span>RE</span></div>
+            <span>Reviewed by <b>Sentinel engine</b></span>
+            <div class="review-bottom-actions">
+              <button class="button button-secondary-sm" id="jumpToDiffsBtn" type="button">Inspect diffs &amp; findings <span>↓</span></button>
+              <button class="button button-ink" id="inspectReview" type="button">Open review dossier <span>↗</span></button>
+            </div>
+          </div>
         </article>
       </section>
 
+      <!-- ─────────────────────── 02: AI Findings & Code-Diff Inspector ─────────────────────── -->
+      <section class="section-header" id="findings">
+        <div class="section-header-left">
+          <div class="section-eyebrow"><span>02</span> EXPLAINABILITY &amp; CODE-DIFF WORKBENCH</div>
+          <h2>Evidence explorer &amp; inline diffs <span class="section-count" id="findingsHeaderCount">00</span></h2>
+          <p>Live findings include the configured rule, severity, file path, and line number. Explanatory traces and patch examples in curated dossiers are illustrative and are not generated by the live reviewer.</p>
+        </div>
+        <div class="section-actions">
+          <button class="text-button" id="showEvidenceExample" type="button">Toggle rule trace pipeline <span>⌁</span></button>
+          <button class="text-button" id="copyReportBtn" type="button">Copy PR review markdown <span>⎘</span></button>
+        </div>
+      </section>
+
+      <article class="evidence-workbench" aria-label="Code review findings and diff explorer">
+        <div class="evidence-toolbar">
+          <div class="evidence-filter-group" role="group" aria-label="Filter findings by severity">
+            <button type="button" class="sev-pill active" data-sev="all">ALL SIGNALS (<span id="sevCountAll">0</span>)</button>
+            <button type="button" class="sev-pill" data-sev="CRITICAL"><i class="sev-dot critical"></i> CRITICAL (<span id="sevCountCrit">0</span>)</button>
+            <button type="button" class="sev-pill" data-sev="HIGH"><i class="sev-dot high"></i> HIGH (<span id="sevCountHigh">0</span>)</button>
+            <button type="button" class="sev-pill" data-sev="MEDIUM"><i class="sev-dot medium"></i> MEDIUM (<span id="sevCountMed">0</span>)</button>
+            <button type="button" class="sev-pill" data-sev="LOW"><i class="sev-dot low"></i> LOW (<span id="sevCountLow">0</span>)</button>
+          </div>
+          <div class="evidence-filter-group">
+            <span class="concept-label" id="evidenceSourceBadge">DETERMINISTIC + AI ENGINE</span>
+          </div>
+        </div>
+
+        <!-- Interactive 3-Step Evidence Chain Trace -->
+        <div class="evidence-chain hidden" id="evidenceChain">
+          <div class="evidence-chain-head">
+            <div>
+              <span class="section-eyebrow">DETERMINISTIC TRACE PIPELINE</span>
+              <strong id="traceTargetTitle">Rule evaluation trace for selected signal</strong>
+            </div>
+            <button class="inline-action" id="hideEvidenceExample" type="button">Hide trace pipeline ↑</button>
+          </div>
+          <div class="evidence-chain-steps">
+            <div class="chain-step">
+              <span class="chain-index chain-blue">01</span>
+              <div>
+                <b id="traceStep1Title">Changed diff hunk captured (sample)</b>
+                <small id="traceStep1Meta">backend/auth.py · line 84</small>
+              </div>
+              <span class="chain-result">CAPTURED</span>
+            </div>
+            <div class="chain-connector" aria-hidden="true"></div>
+            <div class="chain-step">
+              <span class="chain-index chain-yellow">02</span>
+              <div>
+                <b id="traceStep2Title">Rule &amp; invariants evaluated</b>
+                <small id="traceStep2Meta">authorization-check · HIGH</small>
+              </div>
+              <span class="chain-result">MATCHED</span>
+            </div>
+            <div class="chain-connector" aria-hidden="true"></div>
+            <div class="chain-step">
+              <span class="chain-index chain-red">03</span>
+              <div>
+                <b id="traceStep3Title">Illustrative fix example</b>
+                <small id="traceStep3Meta">Role guard missing on state mutation path</small>
+              </div>
+              <span class="chain-result result-review" id="traceStep3Badge">REVIEW</span>
+            </div>
+          </div>
+          <div class="evidence-note">
+            <div class="evidence-note-left">
+              <span class="evidence-note-badge">i</span>
+              <p id="traceNoteText">Trace steps show how Sentinel connects a raw git diff hunk to a specific rule ID before surfacing a developer recommendation.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Findings & Diff Cards Container -->
+        <div class="findings-list" id="findingsList"></div>
+
+        <!-- Empty / Clean State -->
+        <div class="evidence-empty" id="evidenceEmpty">
+          <div class="evidence-empty-top">
+            <div class="evidence-illustration" aria-hidden="true">
+              <div class="evidence-check">✓</div>
+            </div>
+            <div>
+              <h3>No active findings<span>.</span></h3>
+              <p>This pull request passed all configured deterministic and AI review rules with zero blocking signals. You can inspect the clean file diffs above or switch to a flagged pull request to examine high-risk findings and remediation diffs.</p>
+              <div class="evidence-empty-actions">
+                <button class="inline-action" id="inspectFlaggedPrBtn" type="button">Inspect flagged PR #24 (3 High-Risk Signals) <span>↗</span></button>
+                <button class="inline-action" id="previewTraceBtn" type="button">Preview example evidence trace <span>⌁</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ─────────────────────── 03: Analytics, Severity & Rule Coverage ─────────────────────── -->
+      <section class="section-header" id="analytics">
+        <div class="section-header-left">
+          <div class="section-eyebrow"><span>03</span> TELEMETRY &amp; RULE ENGINE ANALYTICS</div>
+          <h2>Review intelligence &amp; rule coverage</h2>
+          <p>Distribution of surfaced findings by severity, 7-day review volume vs. risk detections, and active rule pack performance.</p>
+        </div>
+      </section>
+
+      <section class="analytics-grid" aria-label="Review analytics and rule metrics">
+        <article class="analytics-card">
+          <div>
+            <div class="analytics-card-head">
+              <div>
+                <span class="section-eyebrow">SEVERITY BREAKDOWN</span>
+                <h3>Signals by risk tier</h3>
+              </div>
+              <span class="badge badge-files" id="analyticsTotalSignalsBadge">4 ACTIVE IN QUEUE</span>
+            </div>
+            <div class="sev-stacked-bar" aria-label="Severity distribution bar">
+              <div class="sev-seg-crit" id="barSegCrit" style="width: 25%" title="Critical"></div>
+              <div class="sev-seg-high" id="barSegHigh" style="width: 50%" title="High"></div>
+              <div class="sev-seg-med" id="barSegMed" style="width: 25%" title="Medium"></div>
+              <div class="sev-seg-low" id="barSegLow" style="width: 0%" title="Low"></div>
+            </div>
+            <div class="sev-legend-grid">
+              <div class="sev-legend-item">
+                <span class="sev-legend-label"><i class="sev-dot critical"></i> CRITICAL</span>
+                <b id="legendCritCount">1 (25%)</b>
+              </div>
+              <div class="sev-legend-item">
+                <span class="sev-legend-label"><i class="sev-dot high"></i> HIGH</span>
+                <b id="legendHighCount">2 (50%)</b>
+              </div>
+              <div class="sev-legend-item">
+                <span class="sev-legend-label"><i class="sev-dot medium"></i> MEDIUM</span>
+                <b id="legendMedCount">1 (25%)</b>
+              </div>
+              <div class="sev-legend-item">
+                <span class="sev-legend-label"><i class="sev-dot low"></i> LOW / INFO</span>
+                <b id="legendLowCount">0 (0%)</b>
+              </div>
+            </div>
+          </div>
+          <div class="trend-legend">
+            <span>BLOCKING THRESHOLD: <b>HIGH+</b></span>
+            <span>FALSE-POSITIVE GUARD: <b>ON</b></span>
+          </div>
+        </article>
+
+        <article class="analytics-card">
+          <div>
+            <div class="analytics-card-head">
+              <div>
+                <span class="section-eyebrow">7-DAY THROUGHPUT (BENCHMARK)</span>
+                <h3>Reviews vs. surfaced findings</h3>
+              </div>
+              <span class="badge badge-clean">AVG 4.1s / PR</span>
+            </div>
+            <div class="trend-bars-chart" role="img" aria-label="7-day bar chart comparing reviews processed and findings surfaced">
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:55%" title="Thu: 16 reviews"></div><div class="bar-findings" style="height:22%" title="Thu: 6 findings"></div></div>
+                <span class="trend-day">THU</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:70%" title="Fri: 21 reviews"></div><div class="bar-findings" style="height:28%" title="Fri: 8 findings"></div></div>
+                <span class="trend-day">FRI</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:40%" title="Sat: 11 reviews"></div><div class="bar-findings" style="height:12%" title="Sat: 3 findings"></div></div>
+                <span class="trend-day">SAT</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:48%" title="Sun: 14 reviews"></div><div class="bar-findings" style="height:18%" title="Sun: 5 findings"></div></div>
+                <span class="trend-day">SUN</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:85%" title="Mon: 25 reviews"></div><div class="bar-findings" style="height:34%" title="Mon: 10 findings"></div></div>
+                <span class="trend-day">MON</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:74%" title="Tue: 20 reviews"></div><div class="bar-findings" style="height:24%" title="Tue: 7 findings"></div></div>
+                <span class="trend-day">TUE</span>
+              </div>
+              <div class="trend-col">
+                <div class="trend-bar-pair"><div class="bar-reviews" style="height:92%" title="Wed: 21 reviews"></div><div class="bar-findings" style="height:25%" title="Wed: 7 findings"></div></div>
+                <span class="trend-day">WED</span>
+              </div>
+            </div>
+          </div>
+          <div class="trend-legend">
+            <span><b style="color:var(--blue)">■</b> PRs Reviewed (128)</span>
+            <span><b style="color:var(--orange)">■</b> Signals Surfaced (46)</span>
+          </div>
+        </article>
+
+        <article class="analytics-card">
+          <div>
+            <div class="analytics-card-head">
+              <div>
+                <span class="section-eyebrow">ACTIVE RULE PACKS</span>
+                <h3>Top triggered check families</h3>
+              </div>
+              <span class="badge badge-branch">18 RULES ACTIVE</span>
+            </div>
+            <div class="rule-list">
+              <div class="rule-row">
+                <code>SEC-014 · auth-boundary-check</code>
+                <span class="badge badge-risk">CRITICAL / HIGH</span>
+              </div>
+              <div class="rule-row">
+                <code>CONC-008 · async-race-mutation</code>
+                <span class="badge badge-risk">HIGH</span>
+              </div>
+              <div class="rule-row">
+                <code>VAL-019 · unsanitized-input-schema</code>
+                <span class="badge badge-review">MEDIUM</span>
+              </div>
+              <div class="rule-row">
+                <code>PERF-004 · unbounded-collection-loop</code>
+                <span class="badge badge-files">LOW / PERF</span>
+              </div>
+            </div>
+          </div>
+          <div class="trend-legend">
+            <span>TEST FILE EXCLUSION: <b>ENABLED</b></span>
+            <span>LIVE RULE COVERAGE: <b>CONFIGURED PATTERNS</b></span>
+          </div>
+        </article>
+      </section>
+
+      <!-- ─────────────────────── 04: Monitored Repositories ─────────────────────── -->
+      <section class="section-header" id="repositories-section">
+        <div class="section-header-left">
+          <div class="section-eyebrow"><span>04</span> MONITORED REPOSITORIES</div>
+          <h2>Repository coverage matrix</h2>
+          <p>Click any repository card to filter the review queue and inspect its pull requests.</p>
+        </div>
+      </section>
+
+      <section class="repo-grid" id="repoGrid" aria-label="Monitored repositories">
+        <article class="repo-card">
+          <div class="repo-card-top">
+            <span class="repo-symbol symbol-github">⌘</span>
+            <span class="badge badge-clean">HEALTHY · 0 SIGNALS</span>
+          </div>
+          <h3>ai-code-review-agent</h3>
+          <p>Core AWS Lambda review worker, deterministic rule filters, and GitHub webhook dispatcher.</p>
+          <div class="repo-card-foot">
+            <span>Branch: <b>main</b></span>
+            <button type="button" class="inline-action repo-filter-btn" data-repo="ai-code-review-agent">Inspect PR #1 →</button>
+          </div>
+        </article>
+
+        <article class="repo-card">
+          <div class="repo-card-top">
+            <span class="repo-symbol symbol-purple">V</span>
+            <span class="badge badge-risk">3 HIGH-RISK SIGNALS</span>
+          </div>
+          <h3>valyrian-craft</h3>
+          <p>E-commerce storefront, checkout state management, and inventory reservation API handlers.</p>
+          <div class="repo-card-foot">
+            <span>Branch: <b>main</b></span>
+            <button type="button" class="inline-action repo-filter-btn" data-repo="valyrian-craft">Inspect PR #24 →</button>
+          </div>
+        </article>
+
+        <article class="repo-card">
+          <div class="repo-card-top">
+            <span class="repo-symbol symbol-blue">S</span>
+            <span class="badge badge-review">1 REVIEW SIGNAL</span>
+          </div>
+          <h3>student-portal</h3>
+          <p>Academic enrollment portal, form validation middleware, and document upload endpoints.</p>
+          <div class="repo-card-foot">
+            <span>Branch: <b>develop</b></span>
+            <button type="button" class="inline-action repo-filter-btn" data-repo="student-portal">Inspect PR #18 →</button>
+          </div>
+        </article>
+
+        <article class="repo-card">
+          <div class="repo-card-top">
+            <span class="repo-symbol symbol-green">A</span>
+            <span class="badge badge-clean">HEALTHY · 0 SIGNALS</span>
+          </div>
+          <h3>api-service</h3>
+          <p>Internal REST gateway, rate-limiting middleware, and structured telemetry exporters.</p>
+          <div class="repo-card-foot">
+            <span>Branch: <b>main</b></span>
+            <button type="button" class="inline-action repo-filter-btn" data-repo="api-service">Inspect PR #42 →</button>
+          </div>
+        </article>
+      </section>
+
+      <!-- ─────────────────────── 05 & 06: Flight Recorder & Quality Guardrails ─────────────────────── -->
       <section class="lower-panels">
-        <article class="content-panel evidence-panel" id="findings">
-          <div class="panel-header"><div><div class="section-eyebrow"><span>02</span> EXPLAINABILITY</div><h2>Evidence chain</h2><p>Every signal should have a reason.</p></div><span class="concept-label">CONCEPT</span></div>
-          <div class="evidence-empty" id="evidenceEmpty"><div class="evidence-illustration"><div class="evidence-check">✓</div><span class="evidence-sun"></span></div><h3>No active findings<span>.</span></h3><p>This review has no findings under the current rule set. Select a review with signals to explore an example evidence chain.</p><button class="inline-action" id="showEvidenceExample">Explore example evidence <span>↗</span></button></div>
-          <div class="evidence-chain hidden" id="evidenceChain"><div class="chain-step"><span class="chain-index chain-blue">01</span><div><b>Changed line detected</b><small>backend/auth.py · line 84</small></div><span class="chain-result">CAPTURED</span></div><div class="chain-connector"></div><div class="chain-step"><span class="chain-index chain-yellow">02</span><div><b>Rule matched</b><small>authorization-check · HIGH</small></div><span class="chain-result">MATCHED</span></div><div class="chain-connector"></div><div class="chain-step"><span class="chain-index chain-red">03</span><div><b>Context requires review</b><small>Role check not visible in changed path</small></div><span class="chain-result result-review">REVIEW</span></div><div class="evidence-note"><span>i</span><p>Illustrative example only. This is not a live vulnerability finding.</p></div><button class="inline-action" id="hideEvidenceExample">Close example ↑</button></div>
-        </article>
         <article class="content-panel activity-panel" id="timeline">
-          <div class="panel-header"><div><div class="section-eyebrow"><span>03</span> OBSERVABILITY</div><h2>Flight recorder</h2><p>A transparent record of review events.</p></div><span class="demo-status"><i></i> LIVE DEMO</span></div>
-          <div class="timeline" id="timelineEvents"><div class="timeline-event"><span class="event-icon event-green">✓</span><div class="event-copy"><b>Review completed</b><p>PR #1 · 0 findings · 0 failures</p></div><time>16:38:48</time></div><div class="timeline-event"><span class="event-icon event-blue">↗</span><div class="event-copy"><b>GitHub comment updated</b><p>Summary response · HTTP 200</p></div><time>16:38:48</time></div><div class="timeline-event"><span class="event-icon event-yellow">⌁</span><div class="event-copy"><b>Test files filtered</b><p>3 test files excluded from analysis</p></div><time>16:38:45</time></div><div class="timeline-event"><span class="event-icon event-muted">◷</span><div class="event-copy"><b>Webhook accepted</b><p>Background review queued</p></div><time>16:38:43</time></div></div>
-          <button class="timeline-action" id="addTimelineEvent"><span>＋</span> Add a sample event <small>DEMO ONLY</small></button>
+          <div class="panel-header">
+            <div>
+              <div class="section-eyebrow"><span>05</span> OBSERVABILITY</div>
+              <h2>Flight recorder</h2>
+              <p>Chronological audit log of live API requests, webhook ingestion, rule filtering, and review completions.</p>
+            </div>
+            <span class="demo-status"><i></i> AUDIT STREAM</span>
+          </div>
+
+          <div class="timeline-filter-bar">
+            <div class="queue-filter-pills" role="group" aria-label="Filter flight recorder events">
+              <button type="button" class="filter-pill timeline-filter active" data-tfilter="all">ALL EVENTS</button>
+              <button type="button" class="filter-pill timeline-filter" data-tfilter="api">LIVE API</button>
+              <button type="button" class="filter-pill timeline-filter" data-tfilter="rules">RULE ENGINE</button>
+            </div>
+          </div>
+
+          <div class="timeline" id="timelineEvents">
+            <div class="timeline-event" data-tkind="rules">
+              <span class="event-icon event-green">✓</span>
+              <div class="event-copy">
+                <b>Review completed</b>
+                <p>PR #1 · 0 findings · 5 files evaluated in 4.3s</p>
+              </div>
+              <time>16:38:48</time>
+            </div>
+            <div class="timeline-event" data-tkind="api">
+              <span class="event-icon event-blue">↗</span>
+              <div class="event-copy">
+                <b>GitHub comment updated</b>
+                <p>Summary response · HTTP 200 · Read-only check synced</p>
+              </div>
+              <time>16:38:48</time>
+            </div>
+            <div class="timeline-event" data-tkind="rules">
+              <span class="event-icon event-yellow">⌁</span>
+              <div class="event-copy">
+                <b>Test files filtered</b>
+                <p>3 test fixtures excluded from security rule pass</p>
+              </div>
+              <time>16:38:45</time>
+            </div>
+            <div class="timeline-event" data-tkind="api">
+              <span class="event-icon event-muted">◷</span>
+              <div class="event-copy">
+                <b>Webhook accepted</b>
+                <p>Background review queued for mdibrahim-ux/ai-code-review-agent</p>
+              </div>
+              <time>16:38:43</time>
+            </div>
+          </div>
+
+          <button class="timeline-action" id="addTimelineEvent" type="button">
+            <span>＋</span> Add a sample event <small>DEMO ONLY · NO AWS CALL</small>
+          </button>
+        </article>
+
+        <article class="content-panel" aria-label="Verification guardrails">
+          <div class="panel-header">
+            <div>
+              <div class="section-eyebrow"><span>06</span> DETERMINISTIC ARCHITECTURE</div>
+              <h2>Verification guardrails</h2>
+              <p>Why Sentinel separates deterministic proof from speculative noise.</p>
+            </div>
+            <span class="concept-label">READ-ONLY SAFE</span>
+          </div>
+
+          <div class="guardrails-list">
+            <div class="guardrail-item">
+              <span class="guardrail-check">01</span>
+              <div>
+                <b>Read-Only GitHub &amp; AWS Execution</b>
+                <p>Triggering a live review via <code>POST /review</code> inspects PR diffs without mutating branches or publishing unapproved PR comments.</p>
+              </div>
+            </div>
+            <div class="guardrail-item">
+              <span class="guardrail-check">02</span>
+              <div>
+                <b>Line-Level Evidence &amp; Fix Examples</b>
+                <p>The live API reports rule findings with file paths and line numbers. Curated sample dossiers demonstrate richer explanation and fix concepts for interface preview only.</p>
+              </div>
+            </div>
+            <div class="guardrail-item">
+              <span class="guardrail-check">03</span>
+              <div>
+                <b>Honest Live vs. Sample Data Separation</b>
+                <p>Simulated demo events and sample benchmark metrics are explicitly badged and never misrepresented as live AWS production scans.</p>
+              </div>
+            </div>
+          </div>
         </article>
       </section>
 
-      <section class="quality-banner" id="quality"><div class="quality-mark">Q<span>!</span></div><div class="quality-message"><span class="quality-overline">THE SENTINEL PRINCIPLE</span><h2>Quality signals. <em>Not just scores.</em></h2><p>Separate what the engine observed from what a developer should verify.</p></div><div class="quality-stamp"><span>BUILT FOR</span><b>TRUST</b><i>✳</i></div><div class="quality-dots" aria-hidden="true"></div></section>
-      <footer class="page-footer"><span><b>SENTINEL</b> / CODE INTELLIGENCE</span><span>INTERFACE CONCEPT · SAMPLE DATA · NO LIVE AWS REQUESTS</span><span>MADE FOR PEOPLE WHO SHIP.</span></footer>
+      <!-- ─────────────────────── Quality Principle Banner ─────────────────────── -->
+      <section class="quality-banner" id="quality">
+        <div class="quality-mark">Q<span>!</span></div>
+        <div class="quality-message">
+          <span class="quality-overline">THE SENTINEL PRINCIPLE</span>
+          <h2>Quality signals. <em>Not just scores.</em></h2>
+          <p>Separate what the deterministic engine observed in the diff from what a human maintainer should verify before merge.</p>
+        </div>
+        <div class="quality-stamp"><span>BUILT FOR</span><b>TRUST</b><i>✳</i></div>
+        <div class="quality-dots" aria-hidden="true"></div>
+      </section>
+
+      <footer class="page-footer">
+        <span><b>SENTINEL</b> / CODE INTELLIGENCE v0.2.0</span>
+        <span id="footerApiStatus">HYBRID MODE · SUPPORTS LIVE AWS GATEWAY &amp; LOCAL CURATED SANDBOX</span>
+        <span>MADE FOR ENGINEERS WHO SHIP WITH PROOF.</span>
+      </footer>
     </main>
   </div>
 
-  <!-- Model-details-style dossier: deliberately a real modal with open/close transitions. -->
+  <!-- ─────────────────────── Review Dossier Modal ─────────────────────── -->
   <div class="modal-backdrop hidden" id="dossierBackdrop" aria-hidden="true">
     <section class="dossier-modal" id="dossierModal" role="dialog" aria-modal="true" aria-labelledby="dossierTitle" tabindex="-1">
-      <div class="dossier-topbar"><a class="dossier-brand" href="#overview"><span class="mini-brand-mark">S</span> SENTINEL <span>REVIEW DOSSIER</span></a><div class="dossier-top-actions"><span class="dossier-version">ENGINE / 0.1.0</span><button class="modal-close" id="closeDossier" aria-label="Close review dossier">×</button></div></div>
-      <div class="dossier-hero"><div class="dossier-main-copy"><div class="dossier-overline"><span>REVIEW FILE</span><span id="dossierPR">PR #1</span><i></i><span>LOCAL DEMO</span></div><h2 id="dossierTitle">A closer look<br><em>at the evidence.</em></h2><p id="dossierIntro">A structured view of the selected pull request, its review status, and the evidence available to support that status.</p><div class="dossier-tags"><span id="dossierStatusTag">CLEAN REVIEW</span><span>DETERMINISTIC RULES</span><span>TRACEABLE OUTPUT</span></div></div><div class="dossier-art"><div class="dossier-art-circle circle-one"></div><div class="dossier-art-circle circle-two"></div><div class="dossier-art-square">S<span>✳</span></div><div class="dossier-art-caption">FIG. 01<br>CHANGE / CHECK / PROVE</div></div></div>
-      <div class="dossier-body"><div class="dossier-section-heading"><div><span>01 / REVIEW SUMMARY</span><h3>What changed?</h3></div><span class="dossier-sample-flag">SAMPLE RECORD</span></div><div class="dossier-metrics"><div><span>FILES CHANGED</span><b id="modalFiles">05</b></div><div><span>LINES ADDED</span><b id="modalAdded">+142</b></div><div><span>LINES REMOVED</span><b id="modalRemoved">−38</b></div><div><span>REVIEW DURATION</span><b id="modalTime">4.3s</b></div></div><div class="dossier-columns"><div class="dossier-copy-block"><span class="dossier-mini-label">02 / DECISION BASIS</span><h3 id="dossierDecision">No active findings</h3><p id="dossierDecisionCopy">The sample review returned zero signals under the configured rules. That describes this demo record; it is not a guarantee that a repository has no defects.</p><div class="decision-stamp" id="decisionStamp"><span>✓</span><div><b>STATUS RECORDED</b><small id="decisionStampNote">0 sample findings · no live scan performed</small></div></div></div><div class="dossier-copy-block dossier-files-block"><span class="dossier-mini-label">03 / CHANGE FOOTPRINT</span><h3>Files in focus</h3><div class="modal-file-list" id="modalFileList"><div><span class="modal-file-type type-py">PY</span><span>Python</span><b>03</b></div><div><span class="modal-file-type type-md">MD</span><span>Markdown</span><b>01</b></div><div><span class="modal-file-type type-json">{ }</span><span>Config</span><b>01</b></div></div></div></div><div class="dossier-disclaimer"><span>!</span><p><b>Demo interface:</b> the dashboard is not connected to GitHub or AWS. All dossier information shown here comes from local sample data. Opening this panel does not run a real review.</p></div></div>
-      <div class="dossier-footer"><span><i></i> SENTINEL / EVIDENCE-FIRST REVIEW</span><button class="button button-ink" id="doneDossier">Back to command center <span>↗</span></button></div>
+      <div class="dossier-topbar">
+        <a class="dossier-brand" href="#overview">
+          <span class="mini-brand-mark">S</span> SENTINEL <span>REVIEW DOSSIER</span>
+        </a>
+        <div class="dossier-top-actions">
+          <button class="button button-secondary-sm" id="copyDossierMd" type="button">Copy Markdown Summary ⎘</button>
+          <span class="dossier-version">ENGINE / 0.2.0</span>
+          <button class="modal-close" id="closeDossier" type="button" aria-label="Close review dossier">×</button>
+        </div>
+      </div>
+
+      <div class="dossier-hero">
+        <div class="dossier-main-copy">
+          <div class="dossier-overline">
+            <span>REVIEW FILE</span>
+            <span id="dossierPR">PR #1</span>
+            <i></i>
+            <span id="dossierModeBadge">CURATED + LIVE READY</span>
+          </div>
+          <h2 id="dossierTitle">A closer look<br><em>at the evidence.</em></h2>
+          <p id="dossierIntro">A structured view of the selected pull request, its review status, and the file-level evidence available to support that status.</p>
+          <div class="dossier-tags">
+            <span id="dossierStatusTag">CLEAN REVIEW</span>
+            <span>DETERMINISTIC RULES</span>
+            <span>TRACEABLE OUTPUT</span>
+          </div>
+        </div>
+        <div class="dossier-art" aria-hidden="true">
+          <div class="dossier-art-circle circle-one"></div>
+          <div class="dossier-art-circle circle-two"></div>
+          <div class="dossier-art-square">S<span>✳</span></div>
+          <div class="dossier-art-caption">FIG. 01<br>CHANGE / CHECK / PROVE</div>
+        </div>
+      </div>
+
+      <div class="dossier-body">
+        <div class="dossier-section-heading">
+          <div>
+            <span>01 / REVIEW SUMMARY</span>
+            <h3>What changed in this pull request?</h3>
+          </div>
+          <span class="dossier-sample-flag" id="dossierRecordType">STRUCTURED RECORD</span>
+        </div>
+
+        <div class="dossier-metrics">
+          <div><span>FILES SCANNED</span><b id="modalFiles">05</b></div>
+          <div><span>LINES ADDED</span><b id="modalAdded">+142</b></div>
+          <div><span>LINES REMOVED</span><b id="modalRemoved">−38</b></div>
+          <div><span>REVIEW DURATION</span><b id="modalTime">4.3s</b></div>
+        </div>
+
+        <div class="dossier-columns">
+          <div class="dossier-copy-block">
+            <span class="dossier-mini-label">02 / DECISION BASIS &amp; FINDINGS</span>
+            <h3 id="dossierDecision">No active findings</h3>
+            <p id="dossierDecisionCopy">The review returned zero signals under the configured rules.</p>
+            <div class="decision-stamp" id="decisionStamp">
+              <span id="decisionStampIcon">✓</span>
+              <div>
+                <b id="decisionStampTitle">STATUS RECORDED</b>
+                <small id="decisionStampNote">0 findings · verified against active rule packs</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="dossier-copy-block dossier-files-block">
+            <span class="dossier-mini-label">03 / CHANGE FOOTPRINT</span>
+            <h3>Files &amp; languages in focus</h3>
+            <div class="modal-file-list" id="modalFileList"></div>
+          </div>
+        </div>
+
+        <div class="dossier-disclaimer">
+          <span>!</span>
+          <p id="dossierDisclaimerText"><b>Transparency note:</b> Live reviews execute read-only analysis via the configured AWS API Gateway endpoint (<code>ap-south-1</code>). When offline or in Sample Dataset Mode, curated pull-request records and diffs are displayed and clearly labeled.</p>
+        </div>
+      </div>
+
+      <div class="dossier-footer">
+        <span><i></i> SENTINEL / EVIDENCE-FIRST CODE REVIEW</span>
+        <button class="button button-ink" id="doneDossier" type="button">Back to command center <span>↗</span></button>
+      </div>
     </section>
   </div>
 
-  <div class="palette-backdrop hidden" id="paletteBackdrop" aria-hidden="true"><div class="command-palette" role="dialog" aria-modal="true" aria-label="Quick action menu"><div class="palette-topline"><span>COMMAND INDEX</span><button id="paletteClose" aria-label="Close quick search">ESC ×</button></div><div class="palette-input-wrap"><span>⌕</span><input id="paletteInput" placeholder="What do you want to inspect?" autocomplete="off"><kbd>CTRL K</kbd></div><div class="palette-label">QUICK ACTIONS</div><button class="palette-option" data-action="review"><span class="palette-option-icon yellow-icon">▶</span><span><b>Run code review</b><small>Add a simulated review event</small></span><kbd>R</kbd></button><button class="palette-option" data-action="queue"><span class="palette-option-icon blue-icon">⑂</span><span><b>Go to review queue</b><small>Inspect pull requests</small></span><kbd>Q</kbd></button><button class="palette-option" data-action="timeline"><span class="palette-option-icon mint-icon">◷</span><span><b>Open flight recorder</b><small>See recent review events</small></span><kbd>T</kbd></button><button class="palette-option" data-action="evidence"><span class="palette-option-icon red-icon">⌁</span><span><b>Explore evidence chain</b><small>Inspect an illustrative finding</small></span><kbd>E</kbd></button><button class="palette-option" data-action="details"><span class="palette-option-icon ink-icon">S</span><span><b>Open review dossier</b><small>View the selected review details</small></span><kbd>D</kbd></button><div class="palette-footer"><span>↵ SELECT</span><span>ESC CLOSE</span><span>ALL ACTIONS ARE LOCAL DEMO</span></div></div></div>
-  <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon">✓</span><span id="toastMessage">Action complete.</span><button id="toastClose" aria-label="Dismiss notification">×</button></div>
+  <!-- ─────────────────────── Command Palette (Ctrl + K) ─────────────────────── -->
+  <div class="palette-backdrop hidden" id="paletteBackdrop" aria-hidden="true">
+    <div class="command-palette" role="dialog" aria-modal="true" aria-label="Quick action menu">
+      <div class="palette-topline">
+        <span>COMMAND INDEX &amp; PR JUMP</span>
+        <button id="paletteClose" type="button" aria-label="Close quick search">ESC ×</button>
+      </div>
+      <div class="palette-input-wrap">
+        <span aria-hidden="true">⌕</span>
+        <input id="paletteInput" placeholder="Type a command, section, or PR (e.g. #24, diff, dark, sync)..." autocomplete="off">
+        <kbd>CTRL K</kbd>
+      </div>
+      <div class="palette-label">QUICK ACTIONS</div>
+      <button class="palette-option" type="button" data-action="review">
+        <span class="palette-option-icon yellow-icon">▶</span>
+        <span><b>Run code review on selected PR</b><small>Execute live AWS API review or inspect PR analysis</small></span>
+        <kbd>R</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="evidence">
+        <span class="palette-option-icon red-icon">⌁</span>
+        <span><b>Inspect High-Risk PR #24 (valyrian-craft)</b><small>Jump to 3 security &amp; concurrency findings with diffs</small></span>
+        <kbd>E</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="queue">
+        <span class="palette-option-icon blue-icon">⑂</span>
+        <span><b>Go to pull request review queue</b><small>Search, filter, and sort pull requests</small></span>
+        <kbd>Q</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="details">
+        <span class="palette-option-icon ink-icon">S</span>
+        <span><b>Open full review dossier modal</b><small>View structured decision basis and export Markdown</small></span>
+        <kbd>D</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="timeline">
+        <span class="palette-option-icon mint-icon">◷</span>
+        <span><b>Open observability flight recorder</b><small>Inspect chronological review &amp; webhook events</small></span>
+        <kbd>T</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="sync">
+        <span class="palette-option-icon blue-icon">↻</span>
+        <span><b>Sync live GitHub pull requests</b><small>Query GET /pull-requests on AWS API Gateway</small></span>
+        <kbd>S</kbd>
+      </button>
+      <button class="palette-option" type="button" data-action="theme">
+        <span class="palette-option-icon yellow-icon">◐</span>
+        <span><b>Toggle Light / Dark editorial theme</b><small>Switch surface palette with persistent preference</small></span>
+        <kbd>M</kbd>
+      </button>
+      <div class="palette-footer">
+        <span>↑↓ NAVIGATE · ↵ SELECT</span>
+        <span>ESC CLOSE</span>
+        <span>SENTINEL COMMAND v0.2</span>
+      </div>
+    </div>
+  </div>
 
-<script id="sentinel-theme-toggle">
-(() => {
-  const button = document.getElementById("themeToggle");
-  if (!button) return;
-  const themeMeta = document.querySelector('meta[name="theme-color"]');
-  const applyTheme = (isDark) => {
-    document.body.classList.toggle("dark-mode", isDark);
-    button.setAttribute("aria-pressed", String(isDark));
-    button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
-    button.title = isDark ? "Switch to light mode" : "Switch to dark mode";
-    button.innerHTML = isDark
-      ? '<span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>'
-      : '<span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span>';
-    if (themeMeta) themeMeta.setAttribute("content", isDark ? "#10131c" : "#f4f1e9");
-    try { localStorage.setItem("sentinel-theme", isDark ? "dark" : "light"); } catch (_) {}
-  };
-  let saved = "light";
-  try { saved = localStorage.getItem("sentinel-theme") || "light"; } catch (_) {}
-  applyTheme(saved === "dark");
-  button.addEventListener("click", () => applyTheme(!document.body.classList.contains("dark-mode")));
-})();
-</script>
+  <!-- ─────────────────────── Toast Status Notification ─────────────────────── -->
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast-icon">✓</span>
+    <span id="toastMessage">Action complete.</span>
+    <button id="toastClose" type="button" aria-label="Dismiss notification">×</button>
+  </div>
 
   <script src="script.js"></script>
 </body>
