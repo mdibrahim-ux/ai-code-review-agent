@@ -13,7 +13,6 @@ on:
 permissions:
   contents: read
 
-# Cancel an older run when a newer run targets the same branch or PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -88,3 +87,38 @@ jobs:
       - name: Build and validate Lambda package
         shell: pwsh
         run: ./scripts/build_lambda_package.ps1
+
+  aws-oidc-verify:
+    name: Verify AWS OIDC Access
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::065882629492:role/github-actions-code-review-agent-deploy
+          aws-region: ap-south-1
+          role-session-name: GitHubActionsOIDCVerify
+          allowed-account-ids: "065882629492"
+
+      - name: Verify AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws sts get-caller-identity
+
+      - name: Verify scoped Lambda read access
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda get-function-configuration \
+            --function-name code-review-agent \
+            --query '{FunctionName:FunctionName,FunctionArn:FunctionArn,Runtime:Runtime,Handler:Handler}' \
+            --output json
