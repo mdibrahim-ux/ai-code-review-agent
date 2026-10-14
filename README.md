@@ -108,6 +108,27 @@ Build and validate a deployment-test ZIP (no AWS changes are made):
 
 The script writes `dist/sentinel-dashboard-api-deployment-test.zip` and checks its ZIP integrity and runtime smoke test. Deploying this artifact is a separate, manually approved operation.
 
+## Publish the Sentinel Dashboard
+
+The dashboard is a static HTML/CSS/JavaScript site. It can be hosted on **GitHub Pages for a public repository**, without adding an AWS hosting resource.
+
+1. In repository **Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions**.
+2. Open **Actions → Publish Sentinel Dashboard → Run workflow**.
+3. Open the deployment job's environment URL to view the published dashboard.
+
+The workflow publishes only `dashboard/index.html`, `dashboard/style.css`, and `dashboard/script.js`. It is manually triggered initially so the first deployment does not run until Pages has been enabled. After the initial deployment succeeds, its trigger can be changed to publish automatically after dashboard changes merge to `main`.
+
+The dashboard calls the existing API Gateway endpoints in `ap-south-1`. Its browser origin must be present in the API Gateway CORS allowlist for live API requests to work. CORS does not replace server-side access controls.
+
+## Controlled AWS Lambda Deployment
+
+The `Python CI` workflow can build and validate both Lambda ZIPs. Deployments are manually triggered from `main` and require `confirm_deployment=yes`. Choose the specific `deployment_target`:
+
+- `code-review-agent` — signed webhook receiver and background commenter.
+- `sentinel-dashboard-api` — read-only dashboard API; review results are returned to the dashboard and are not posted as comments.
+
+The workflow verifies the selected Lambda ARN, runtime, handler, and deployed ZIP checksum. The dashboard API deployment additionally calls the existing API Gateway health/queue/review endpoints after updating the code. No new AWS service is created by these workflows.
+
 ## AWS Configuration
 
 The webhook receiver runs on AWS Lambda and integrates with GitHub through a webhook.
