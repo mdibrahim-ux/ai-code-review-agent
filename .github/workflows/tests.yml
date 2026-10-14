@@ -71,6 +71,60 @@ jobs:
       - name: Compile Python files
         run: python -m compileall -q backend tests
 
+      - name: Validate dashboard assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dashboard/index.html
+          test -s dashboard/style.css
+          test -s dashboard/script.js
+          node --check dashboard/script.js
+          python - <<'PY'
+          from collections import Counter
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path("dashboard")
+          html = (root / "index.html").read_text(encoding="utf-8")
+          css = (root / "style.css").read_text(encoding="utf-8")
+
+          class DashboardParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = []
+                  self.local_styles = []
+                  self.local_scripts = []
+
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if values.get("id"):
+                      self.ids.append(values["id"])
+                  if tag == "link" and values.get("rel") == "stylesheet":
+                      href = values.get("href", "")
+                      if href and not href.startswith(("http://", "https://", "//", "data:")):
+                          self.local_styles.append(href)
+                  if tag == "script" and values.get("src"):
+                      src = values["src"]
+                      if not src.startswith(("http://", "https://", "//", "data:")):
+                          self.local_scripts.append(src)
+
+          parser = DashboardParser()
+          parser.feed(html)
+          duplicates = [name for name, count in Counter(parser.ids).items() if count > 1]
+          if duplicates:
+              raise SystemExit("Duplicate dashboard element IDs: " + ", ".join(duplicates))
+          missing = [
+              str(root / name)
+              for name in parser.local_styles + parser.local_scripts
+              if not (root / name).is_file()
+          ]
+          if missing:
+              raise SystemExit("Missing referenced dashboard assets: " + ", ".join(missing))
+          if css.count("{") != css.count("}"):
+              raise SystemExit("Dashboard CSS has unbalanced braces.")
+          print("Dashboard HTML, CSS, assets, and JavaScript syntax passed.")
+          PY
+
       - name: Check patch formatting
         shell: bash
         env:
