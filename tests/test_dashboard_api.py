@@ -29,7 +29,9 @@ def decode_response(value):
 class DashboardApiTests(unittest.TestCase):
     def test_health_does_not_call_github(self):
         with patch.object(api, "get_github_token") as token:
-            status, body, headers = decode_response(api.lambda_handler(api_event("GET", "/health"), None))
+            status, body, headers = decode_response(
+                api.lambda_handler(api_event("GET", "/health"), None)
+            )
         self.assertEqual(status, 200)
         self.assertEqual(body, {"status": "ok", "service": "sentinel-dashboard-api"})
         token.assert_not_called()
@@ -37,7 +39,11 @@ class DashboardApiTests(unittest.TestCase):
 
     def test_unapproved_origin_gets_no_cors_permission(self):
         with patch.object(api, "get_github_token"):
-            status, _, headers = decode_response(api.lambda_handler(api_event("GET", "/health", origin="https://evil.example"), None))
+            status, _, headers = decode_response(
+                api.lambda_handler(
+                    api_event("GET", "/health", origin="https://evil.example"), None
+                )
+            )
         self.assertEqual(status, 200)
         self.assertNotIn("Access-Control-Allow-Origin", headers)
 
@@ -53,7 +59,9 @@ class DashboardApiTests(unittest.TestCase):
              patch.object(api, "list_open_pull_requests", return_value=[
                  api._open_pull_request_summary({**pull_requests[0], "number": 7})
              ]):
-            status, body, _ = decode_response(api.lambda_handler(api_event("GET", "/pull-requests"), None))
+            status, body, _ = decode_response(
+                api.lambda_handler(api_event("GET", "/pull-requests"), None)
+            )
         self.assertEqual(status, 200)
         self.assertEqual(body["repository"], api.DEFAULT_REPOSITORY)
         self.assertEqual(body["count"], 1)
@@ -74,7 +82,11 @@ class DashboardApiTests(unittest.TestCase):
         }]
         with patch.object(api, "get_github_token", return_value="fake-token"), \
              patch.object(api, "_get_open_pr_and_files", return_value=(pr, files)):
-            status, body, _ = decode_response(api.lambda_handler(api_event("POST", "/review", {"pull_request_number": 7}), None))
+            status, body, _ = decode_response(
+                api.lambda_handler(
+                    api_event("POST", "/review", {"pull_request_number": 7}), None
+                )
+            )
         self.assertEqual(status, 200)
         self.assertEqual(body["status"], "reviewed")
         self.assertEqual(body["mode"], "read-only")
@@ -99,7 +111,11 @@ class DashboardApiTests(unittest.TestCase):
         event["body"] = base64.b64encode(json.dumps({"pull_request_number": 7}).encode()).decode()
         event["isBase64Encoded"] = True
         with patch.object(api, "get_github_token", return_value="fake-token"), \
-             patch.object(api, "review_pull_request", return_value={"status": "reviewed", "comments_published": False}) as review:
+             patch.object(
+                 api,
+                 "review_pull_request",
+                 return_value={"status": "reviewed", "comments_published": False},
+             ) as review:
             status, body, _ = decode_response(api.lambda_handler(event, None))
         self.assertEqual(status, 200)
         review.assert_called_once_with("fake-token", 7)
