@@ -104,6 +104,10 @@ jobs:
         shell: pwsh
         run: ./scripts/build_lambda_package.ps1
 
+      - name: Build and validate dashboard API package
+        shell: pwsh
+        run: ./scripts/build_dashboard_api_package.ps1
+
       # Upload only for an explicitly confirmed manual deployment from main.
       - name: Upload validated Lambda package
         if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'yes'
