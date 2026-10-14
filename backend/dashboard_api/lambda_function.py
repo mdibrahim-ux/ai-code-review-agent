@@ -140,7 +140,7 @@ def github_request_json(url: str, token: str) -> Any:
         except Exception:
             pass
         raise GitHubAPIError(exc.code, message) from None
-    except urllib.error.URLError as exc:
+    except urllib.error.URLError:
         raise RuntimeError("Unable to reach the GitHub API") from None
     except (json.JSONDecodeError, UnicodeDecodeError):
         raise RuntimeError("GitHub returned an invalid JSON response") from None
@@ -176,7 +176,15 @@ def _open_pull_request_summary(pr: dict[str, Any]) -> dict[str, Any]:
 
 def list_open_pull_requests(token: str) -> list[dict[str, Any]]:
     raw = github_request_json(
-        github_url("pulls", {"state": "open", "per_page": str(MAX_PULL_REQUESTS), "sort": "updated", "direction": "desc"}),
+        github_url(
+            "pulls",
+            {
+                "state": "open",
+                "per_page": str(MAX_PULL_REQUESTS),
+                "sort": "updated",
+                "direction": "desc",
+            },
+        ),
         token,
     )
     if not isinstance(raw, list):
@@ -230,13 +238,18 @@ def _positive_pr_number(value: Any) -> int:
     return number
 
 
-def _get_open_pr_and_files(token: str, pr_number: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _get_open_pr_and_files(
+    token: str, pr_number: int
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     pr = github_request_json(github_url(f"pulls/{pr_number}"), token)
     if not isinstance(pr, dict) or int(pr.get("number", 0) or 0) != pr_number:
         raise RuntimeError("GitHub returned an invalid pull-request record")
     if str(pr.get("state", "")).lower() != "open":
         raise GitHubAPIError(409, "Only open pull requests can be reviewed")
-    if str((pr.get("base") or {}).get("repo", {}).get("full_name", "")).casefold() != configured_repository().casefold():
+    base_repo = str(
+        (pr.get("base") or {}).get("repo", {}).get("full_name", "")
+    ).casefold()
+    if base_repo != configured_repository().casefold():
         raise GitHubAPIError(403, "Pull request does not target the configured repository")
 
     raw_files = github_request_json(
@@ -327,7 +340,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "count": len(pull_requests),
                 "pull_requests": pull_requests,
                 "finding_totals_available": False,
-                "message": "Live pull-request metadata is available. Finding totals are returned per review and are not stored historically.",
+                "message": (
+                    "Live pull-request metadata is available. Finding totals "
+                    "are returned per review and are not stored historically."
+                ),
             }, event)
 
         if method == "POST" and path == "/review":
