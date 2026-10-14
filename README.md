@@ -31,7 +31,9 @@ ai-code-review-agent/
 │   └── workflows/
 │       └── tests.yml
 ├── backend/
-│   ├── lambda_function.py
+│   ├── lambda_function.py              # GitHub webhook receiver + async commenter
+│   ├── dashboard_api/
+│   │   └── lambda_function.py          # Read-only dashboard API source
 │   └── review_engine/
 │       ├── __init__.py
 │       ├── analyzer.py
@@ -80,6 +82,31 @@ The script creates a deployment ZIP under `dist/` and verifies its contents and 
 The `Python Tests` workflow runs on pushes to `main` and `test-ai-review`, and on pull requests targeting `main`.
 
 It installs the Python dependency, runs unit tests, and checks Python compilation.
+
+## Dashboard API (Read-Only)
+
+The dashboard API handler lives in `backend/dashboard_api/lambda_function.py`. It implements:
+
+- `GET /health` — health check.
+- `GET /dashboard` — live pull-request metadata and explicit disclosure that historical findings are not persisted.
+- `GET /pull-requests` — open pull-request metadata from the configured repository.
+- `POST /review` — read-only deterministic review of an open pull-request diff. It never posts comments.
+
+The handler reads the existing `/code-review-agent/github-token` SecureString in Systems Manager Parameter Store. It does not accept an arbitrary repository name from the browser, and it returns `comments_published: false`. The separate webhook Lambda remains responsible for publishing GitHub summary and inline comments after signed webhook events.
+
+Run its tests with:
+
+```powershell
+python -m unittest tests.test_dashboard_api -v
+```
+
+Build and validate a deployment-test ZIP (no AWS changes are made):
+
+```powershell
+.\scripts\build_dashboard_api_package.ps1
+```
+
+The script writes `dist/sentinel-dashboard-api-deployment-test.zip` and checks its ZIP integrity and runtime smoke test. Deploying this artifact is a separate, manually approved operation.
 
 ## AWS Configuration
 
