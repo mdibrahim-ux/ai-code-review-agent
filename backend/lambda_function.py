@@ -205,7 +205,7 @@ def format_review_comment(
                 f"{finding['message']}"
             )
         if len(review["findings"]) > 100:
-                        lines.append(
+            lines.append(
                 f"- _{len(review['findings']) - 100} additional findings "
                 "omitted from this summary._"
             )
@@ -353,10 +353,7 @@ def publish_inline_comments(
         except (KeyError, TypeError, ValueError):
             result["inline_comments_skipped"].append({
                 "filename": filename,
-                "reason": (
-                    f"Safety cap of {MAX_INLINE_COMMENTS_PER_RUN} "
-                        "new inline comments reached"
-                ),
+                "reason": "Finding has an invalid line number",
             })
             continue
         rule = str(finding.get("rule", "unknown-rule"))
@@ -403,9 +400,9 @@ def publish_inline_comments(
                         "line": line,
                         "rule": rule,
                         "reason": (
-    f"Safety cap of {MAX_INLINE_COMMENTS_PER_RUN} "
-    "new inline comments reached"
-),
+                            f"Safety cap of {MAX_INLINE_COMMENTS_PER_RUN} "
+                            "new inline comments reached"
+                        ),
                     })
                     continue
                 payload: dict[str, Any] = {
