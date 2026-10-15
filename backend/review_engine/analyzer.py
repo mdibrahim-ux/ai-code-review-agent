@@ -263,11 +263,37 @@ def _scan_ast_tree(
 
 
 def _ast_findings(
-    filename: str, diff_lines: list[dict[str, Any]]
+    filename: str,
+    diff_lines: list[dict[str, Any]],
+    source_text: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Run AST checks per diff hunk; fall back to valid added lines for partial hunks."""
+    """Analyze complete changed Python files when supplied; otherwise parse diff hunks."""
     if not filename.lower().endswith(".py"):
         return []
+
+    diff_index_by_id = {id(record): index for index, record in enumerate(diff_lines)}
+
+    # Full source resolves multi-line calls and syntax context across distant hunks.
+    # Findings are still limited to call expressions that overlap an added PR line.
+    if isinstance(source_text, str) and source_text:
+        try:
+            full_tree = ast.parse(source_text)
+        except (SyntaxError, ValueError, RecursionError):
+            full_tree = None
+        if full_tree is not None:
+            added_records_by_line = {
+                int(record["new_line"]): record
+                for record in diff_lines
+                if record.get("type") == "add" and record.get("new_line") is not None
+            }
+            return _scan_ast_tree(
+                full_tree,
+                added_records_by_line,
+                0,
+                filename,
+                diff_lines,
+                diff_index_by_id,
+            )
 
     by_hunk: dict[int, list[dict[str, Any]]] = {}
     for record in diff_lines:
@@ -342,7 +368,9 @@ def _ast_findings(
     return findings
 
 
-def analyze_patch(filename: str, patch: str) -> list[dict[str, Any]]:
+def analyze_patch(
+    filename: str, patch: str, source_text: str | None = None
+) -> list[dict[str, Any]]:
     """Analyze changed lines with deterministic patterns and AST-aware Python checks."""
     findings: list[dict[str, Any]] = []
     if is_test_file(filename):
@@ -369,7 +397,7 @@ def analyze_patch(filename: str, patch: str) -> list[dict[str, Any]]:
                     "analysis_method": "pattern",
                 })
 
-    findings.extend(_ast_findings(filename, diff_lines))
+    findings.extend(_ast_findings(filename, diff_lines, source_text=source_text))
 
     # A rule and line pair may be found by both the pattern and AST passes.
     unique: dict[tuple[str, int, str], dict[str, Any]] = {}
@@ -406,7 +434,10 @@ def review_files(files: list[dict[str, Any]]) -> dict[str, Any]:
             skipped_files.append(filename)
             continue
 
-        findings.extend(analyze_patch(filename, patch))
+        source_text = file.get("source_text")
+        if not isinstance(source_text, str):
+            source_text = None
+        findings.extend(analyze_patch(filename, patch, source_text=source_text))
 
     findings.sort(key=lambda item: (
         SEVERITY_ORDER.get(item.get("severity", "LOW"), 3),

@@ -36,6 +36,8 @@ USER_AGENT = "Sentinel-Dashboard-API"
 REQUEST_TIMEOUT_SECONDS = 4
 MAX_PULL_REQUESTS = 30
 MAX_CHANGED_FILES = 100
+MAX_FULL_SOURCE_FILES = 2
+MAX_SOURCE_FILE_BYTES = 50_000
 MAX_PATCH_BYTES = 100_000
 MAX_BODY_BYTES = 32_768
 
@@ -153,6 +155,80 @@ def github_url(path: str, query: dict[str, str] | None = None) -> str:
     if query:
         url = f"{url}?{urllib.parse.urlencode(query)}"
     return url
+
+
+def _fetch_full_python_source(filename: str, ref: str, token: str) -> str | None:
+    """Fetch a small changed Python file from the exact PR head commit.
+
+    Returns None when the file is missing, non-UTF-8, too large, or unavailable.
+    The caller then falls back to AST analysis of the unified-diff hunks.
+    """
+    normalized = filename.replace(chr(92), "/")
+    parts = normalized.split("/")
+    if (
+        not normalized.lower().endswith(".py")
+        or normalized.startswith("/")
+        or any(part in {"", ".", ".."} for part in parts)
+        or len(normalized) > 1_000
+    ):
+        return None
+
+    encoded_path = urllib.parse.quote(normalized, safe="/")
+    payload = github_request_json(
+        github_url(f"contents/{encoded_path}", {"ref": ref}), token
+    )
+    if not isinstance(payload, dict) or payload.get("encoding") != "base64":
+        return None
+
+    size = payload.get("size")
+    if not isinstance(size, int) or isinstance(size, bool):
+        return None
+    if size < 0 or size > MAX_SOURCE_FILE_BYTES:
+        return None
+
+    encoded_content = payload.get("content")
+    max_encoded_chars = MAX_SOURCE_FILE_BYTES * 4 // 3 + 2_000
+    if not isinstance(encoded_content, str) or len(encoded_content) > max_encoded_chars:
+        return None
+    try:
+        source_bytes = base64.b64decode(encoded_content, validate=False)
+        source_text = source_bytes.decode("utf-8", "strict")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+    if len(source_bytes) > MAX_SOURCE_FILE_BYTES or not source_text:
+        return None
+    return source_text
+
+
+def _enrich_python_source_context(
+    files: list[dict[str, Any]], head_sha: str, token: str
+) -> tuple[list[dict[str, Any]], int]:
+    """Attach complete content for at most two changed Python files, best-effort."""
+    if not isinstance(head_sha, str) or not head_sha.strip():
+        return files, 0
+
+    attempts = 0
+    loaded = 0
+    for item in files:
+        if attempts >= MAX_FULL_SOURCE_FILES:
+            break
+        filename = str(item.get("filename", ""))
+        if not filename.lower().endswith(".py") or not item.get("patch"):
+            continue
+        attempts += 1
+        try:
+            source_text = _fetch_full_python_source(filename, head_sha, token)
+        except GitHubAPIError as exc:
+            logger.info("Full-source context skipped: GitHub status=%s", exc.status)
+            continue
+        except Exception as exc:
+            logger.info("Full-source context skipped: %s", type(exc).__name__)
+            continue
+        if source_text is not None:
+            item["source_text"] = source_text
+            loaded += 1
+    return files, loaded
 
 
 def _open_pull_request_summary(pr: dict[str, Any]) -> dict[str, Any]:
@@ -277,6 +353,8 @@ def _get_open_pr_and_files(
 def review_pull_request(token: str, pr_number: int) -> dict[str, Any]:
     """Analyze a PR diff using configured rules, without publishing GitHub comments."""
     pr, files = _get_open_pr_and_files(token, pr_number)
+    head_sha = str((pr.get("head") or {}).get("sha", ""))
+    files, source_context_files_loaded = _enrich_python_source_context(files, head_sha, token)
     analysis = review_files(files)
     severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for item in analysis["findings"]:
@@ -291,7 +369,8 @@ def review_pull_request(token: str, pr_number: int) -> dict[str, Any]:
         "pull_request_number": pr_number,
         "title": str(pr.get("title", ""))[:300],
         "url": str(pr.get("html_url", "")),
-        "head_sha": str((pr.get("head") or {}).get("sha", "")),
+        "head_sha": head_sha,
+        "source_context_files_loaded": source_context_files_loaded,
         "status": "reviewed",
         "mode": "read-only",
         "files_scanned": int(analysis["files_scanned"]),

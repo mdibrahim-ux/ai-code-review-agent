@@ -141,9 +141,9 @@ The `Python CI` workflow can build and validate both Lambda ZIPs. Deployments ar
 
 The workflow verifies the selected Lambda ARN, runtime, handler, and deployed ZIP checksum. The dashboard API deployment additionally calls the existing API Gateway health/queue/review endpoints after updating the code. No new AWS service is created by these workflows.
 
-### Dashboard API timeout budget
+### Dashboard API source-context budget
 
-The manually confirmed dashboard API deployment sets the existing `sentinel-dashboard-api` Lambda timeout to 10 seconds and verifies that configuration after the update. Each outbound GitHub HTTP request is bounded to 4 seconds, leaving time for the second request and response handling. The browser waits up to 12 seconds for a live review response, below the existing API Gateway 30-second integration timeout. This uses existing resources only; it does not create a new AWS service or hosting resource.
+The manually confirmed dashboard API deployment sets the existing `sentinel-dashboard-api` Lambda timeout to 25 seconds, below its existing API Gateway 30-second integration timeout. Each outbound GitHub request is bounded to 4 seconds. For live reviews, the API may fetch complete contents for at most two changed Python files at the pull request's exact head commit, with each source file capped at 50 KB. When content is missing, too large, or unavailable, the analyzer falls back to the unified diff. AST findings are only returned when their call expressions overlap added PR lines. The dashboard waits up to 27 seconds for a live review response. This uses existing resources only and creates no additional AWS services.
 
 
 ## AWS Configuration

@@ -533,7 +533,7 @@ jobs:
           set -euo pipefail
           aws lambda update-function-configuration \
             --function-name sentinel-dashboard-api \
-            --timeout 10 \
+            --timeout 25 \
             --output json
 
       - name: Wait for dashboard API configuration update
@@ -550,7 +550,7 @@ jobs:
             --function-name sentinel-dashboard-api \
             --query Timeout \
             --output text)"
-          if [[ "$TIMEOUT" != "10" ]]; then
+          if [[ "$TIMEOUT" != "25" ]]; then
             echo "::error::Unexpected dashboard API timeout: $TIMEOUT"
             exit 1
           fi
@@ -613,7 +613,7 @@ jobs:
           PR_NUMBER="$(printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); p=r.get("pull_requests") or []; print(p[0]["number"] if p else "")')"
           if [[ -n "$PR_NUMBER" ]]; then
             REVIEW_BODY="$(printf '{"pull_request_number":%s}' "$PR_NUMBER")"
-            curl --fail --silent --show-error --max-time 25 \
+            curl --fail --silent --show-error --max-time 29 \
               -H "Content-Type: application/json" \
               -d "$REVIEW_BODY" "$API_BASE/review" |
               python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("status") == "reviewed", r; assert r.get("mode") == "read-only", r; assert r.get("comments_published") is False, r; print("Read-only review route passed; no comments were published.")'
