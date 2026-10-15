@@ -408,6 +408,25 @@ if not any(
 ):
     raise SystemExit("ERROR: The unsafe-eval rule was not found in the results.")
 
+# Verify AST-aware subprocess analysis from the actual ZIP artifact.
+shell_patch = (
+    "@@ -1,1 +1,6 @@\n"
+    " import subprocess\n"
+    "+def run_command(command):\n"
+    "+    return subprocess.run(\n"
+    "+        command,\n"
+    "+        shell=True,\n"
+    "+    )\n"
+)
+shell_result = review_files([{"filename": "runner.py", "patch": shell_patch}])
+if not any(
+    finding.get("rule") == "subprocess-shell-true"
+    and finding.get("line") == 5
+    for finding in shell_result.get("findings", [])
+):
+    raise SystemExit("ERROR: AST subprocess-shell-true regression check failed.")
+
+print("AST structural regression test passed.")
 print("ZIP runtime smoke test passed.")
 print("Lambda handler imported successfully from the ZIP.")
 print("Review engine detected the unsafe-eval regression case.")

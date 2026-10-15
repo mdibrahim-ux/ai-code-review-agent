@@ -94,6 +94,85 @@ class ReviewEngineTests(unittest.TestCase):
             [("add", 1)],
         )
 
+    def test_ast_detects_subprocess_shell_true_with_multiline_call(self):
+        findings = analyze_patch(
+            "runner.py",
+            (
+                "@@ -1,1 +1,6 @@\n"
+                " import subprocess\n"
+                "+def run_command(command):\n"
+                "+    return subprocess.run(\n"
+                "+        command,\n"
+                "+        shell=True,\n"
+                "+    )\n"
+            ),
+        )
+
+        matches = [item for item in findings if item["rule"] == "subprocess-shell-true"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["severity"], "HIGH")
+        self.assertEqual(matches[0]["line"], 5)
+        self.assertEqual(matches[0]["analysis_method"], "AST")
+        self.assertTrue(any(line["focus"] for line in matches[0]["diff_context"]))
+
+    def test_ast_ignores_eval_text_in_comments_and_strings(self):
+        findings = analyze_patch(
+            "example.py",
+            (
+                "@@ -1,1 +1,3 @@\n"
+                '+message = "eval(user_input)"\n'
+                "+# eval(user_input)\n"
+                "+result = builtins.eval(user_input)\n"
+            ),
+        )
+
+        matches = [item for item in findings if item["rule"] == "unsafe-eval"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["line"], 3)
+        self.assertEqual(matches[0]["analysis_method"], "AST")
+
+    def test_ast_detects_unsafe_deserialization_and_exec(self):
+        findings = analyze_patch(
+            "loader.py",
+            (
+                "@@ -1,1 +1,3 @@\n"
+                "+exec(user_code)\n"
+                "+value = pickle.loads(payload)\n"
+                "+yaml.load(document)\n"
+            ),
+        )
+
+        detected = {(item["rule"], item["line"]) for item in findings}
+        self.assertIn(("unsafe-exec", 1), detected)
+        self.assertIn(("unsafe-deserialization", 2), detected)
+        self.assertIn(("unsafe-yaml-load", 3), detected)
+
+    def test_ast_does_not_flag_yaml_safe_loader(self):
+        findings = analyze_patch(
+            "loader.py",
+            (
+                "@@ -1,1 +1,2 @@\n"
+                "+value = yaml.load(document, Loader=yaml.SafeLoader)\n"
+                "+safe_value = yaml.safe_load(document)\n"
+            ),
+        )
+
+        self.assertNotIn("unsafe-yaml-load", {item["rule"] for item in findings})
+
+    def test_ast_detects_direct_f_string_sql_interpolation(self):
+        findings = analyze_patch(
+            "database.py",
+            (
+                "@@ -1,1 +1,1 @@\n"
+                '+cursor.execute(f"SELECT * FROM users WHERE name = {name}")\n'
+            ),
+        )
+
+        matches = [item for item in findings if item["rule"] == "sql-string-interpolation"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["severity"], "HIGH")
+        self.assertEqual(matches[0]["line"], 1)
+
     def test_ignores_test_fixtures(self):
         findings = analyze_patch(
             "tests/test_example.py",
