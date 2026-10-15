@@ -93,7 +93,7 @@ The shared review engine uses Python's built-in `ast` module to inspect changed 
 - `yaml.load()` without a recognized safe loader.
 - Direct f-string or non-constant string concatenation passed to SQL `execute()/executemany()`.
 
-The analyzer preserves changed-line numbers and nearby patch context. GitHub diffs can contain incomplete fragments; when a whole hunk cannot be parsed, the analyzer falls back to individually parseable added lines. This remains deterministic static analysis, not full-repository semantic analysis or an LLM review. Imported aliases, values constructed elsewhere, and complex multi-file flows may not be recognized, and all findings require developer verification.
+The analyzer preserves changed-line numbers and nearby patch context. AST checks distinguish executable calls from matching text inside comments and string literals. GitHub diffs can contain incomplete fragments; when a whole hunk cannot be parsed, the analyzer falls back to individually parseable added lines. This remains deterministic static analysis, not full-repository semantic analysis or an LLM review. Imported aliases, values constructed elsewhere, and complex multi-file flows may not be recognized, and all findings require developer verification.
 
 ## Dashboard API (Read-Only)
 
