@@ -74,12 +74,24 @@ class DashboardApiTests(unittest.TestCase):
             "html_url": "https://github.com/mdibrahim-ux/ai-code-review-agent/pull/7",
             "head": {"sha": "abc123"},
             "base": {"repo": {"full_name": api.DEFAULT_REPOSITORY}},
+            "changed_files": 2,
+            "additions": 4,
+            "deletions": 2,
         }
-        files = [{
-            "filename": "demo_vulnerable.py",
-            "status": "modified",
-            "patch": "@@ -1,1 +1,1 @@\n-result = 1\n+result = eval(user_input)\n",
-        }]
+        files = [
+            {
+                "filename": "demo_vulnerable.py",
+                "status": "modified",
+                "patch": "@@ -1,1 +1,1 @@\n-result = 1\n+result = eval(user_input)\n",
+                "additions": 3, "deletions": 1, "changes": 4,
+            },
+            {
+                "filename": "README.md",
+                "status": "modified",
+                "patch": "",
+                "additions": 1, "deletions": 1, "changes": 2,
+            },
+        ]
         with patch.object(api, "get_github_token", return_value="fake-token"), \
              patch.object(api, "_get_open_pr_and_files", return_value=(pr, files)), \
              patch.object(api, "_enrich_python_source_context", return_value=(files, 0)):
@@ -95,6 +107,25 @@ class DashboardApiTests(unittest.TestCase):
         self.assertEqual(body["finding_count"], 1)
         self.assertEqual(body["findings"][0]["filename"], "demo_vulnerable.py")
         self.assertEqual(body["findings"][0]["rule"], "unsafe-eval")
+        self.assertEqual(body["source_context_files_loaded"], 0)
+        self.assertEqual(body["changed_files_count"], 2)
+        self.assertEqual(body["total_changed_files"], 2)
+        self.assertFalse(body["changed_files_truncated"])
+        self.assertEqual(body["additions"], 4)
+        self.assertEqual(body["deletions"], 2)
+        self.assertEqual(
+            [
+                (
+                    item["filename"], item["additions"], item["deletions"],
+                    item["changes"], item["patch_available"],
+                )
+                for item in body["changed_files"]
+            ],
+            [
+                ("demo_vulnerable.py", 3, 1, 4, True),
+                ("README.md", 1, 1, 2, False),
+            ],
+        )
 
     def test_fetch_full_python_source_decodes_bounded_base64_content(self):
         source = "value = 42\n"

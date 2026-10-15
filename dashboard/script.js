@@ -799,7 +799,16 @@
     list.replaceChildren();
 
     const files = Array.isArray(review.changedFiles) ? review.changedFiles : [];
-    safeText("#changedFilesCountLabel", review.isSample ? `${files.length} SAMPLE FILES` : `${files.length} FINDING FILES`);
+    safeText(
+      "#changedFilesCountLabel",
+      review.isSample
+        ? `${files.length} SAMPLE FILES`
+        : review.changedFilesTruncated
+          ? `${files.length} OF ${review.totalChangedFiles} FILES SHOWN`
+          : review.changedFilesManifestAvailable
+            ? `${files.length} CHANGED FILES`
+            : `${files.length} FINDING FILES`
+    );
 
     if (!files.length) {
       const empty = document.createElement("div");
@@ -807,9 +816,11 @@
       empty.style.color = "var(--ink-muted)";
       empty.textContent = review.isSample
         ? "This curated sample has no file list for the selected record."
-        : review.liveResult
-          ? "The read-only endpoint returns paths for files with findings, but not a complete manifest of clean files or line-change totals."
-          : "Run a live review to load file paths for any findings; clean-file metadata is not currently exposed by this endpoint.";
+        : review.liveResult && !review.changedFilesManifestAvailable
+          ? "This API response does not include a complete changed-file manifest yet. Update the dashboard API deployment to show clean files and line-change totals."
+          : review.liveResult
+          ? "The API returned no changed-file entries for this pull request."
+          : "Run a live review to load the pull request changed-file manifest.";
       list.appendChild(empty);
       return;
     }
@@ -820,7 +831,9 @@
       btn.className = "changed-file-item";
       const sigBadge = file.signals > 0
         ? `<span class="badge badge-risk">${file.signals} SIGNAL${file.signals > 1 ? "S" : ""}</span>`
-        : `<span class="badge badge-clean">CLEAN</span>`;
+        : review.liveResult
+          ? `<span class="badge badge-clean">NO MATCH</span>`
+          : `<span class="badge badge-clean">SAMPLE CLEAN</span>`;
 
       btn.innerHTML = `
         <span class="changed-file-path">${escapeHTML(file.path)}</span>
@@ -839,7 +852,7 @@
         if (file.signals > 0) {
           showToast(`Inspecting findings in ${file.path}`);
         } else {
-          showToast(`${file.path} passed all active rule checks.`);
+          showToast(`No findings were returned for ${file.path} by the configured review rules.`);
         }
       });
 
@@ -911,10 +924,13 @@
     safeText("#sevCountMed", cMed);
     safeText("#sevCountLow", cLow);
 
+    const astFindingCount = allFindings.filter(f => String(f.analysisMethod || "").toUpperCase() === "AST").length;
     safeText(
       "#evidenceSourceBadge",
       review.liveResult
-        ? "LIVE AWS API ANALYSIS"
+        ? (review.sourceContextFilesLoaded > 0 || astFindingCount > 0
+          ? `LIVE AST + PATTERN · ${review.sourceContextFilesLoaded || 0} FULL-SOURCE FILES`
+          : "LIVE DETERMINISTIC REVIEW")
         : review.isSample
           ? "SAMPLE DOSSIER RECORD"
           : "DETERMINISTIC RULE ENGINE"
@@ -972,6 +988,9 @@
 
       const hasDiff = Array.isArray(finding.diffLines) && finding.diffLines.length > 0;
       const hasFix = Array.isArray(finding.fixLines) && finding.fixLines.length > 0;
+      const analysisMethodBadge = finding.analysisMethod
+        ? `<span class="finding-rule-tag">${escapeHTML(finding.analysisMethod)}</span>`
+        : "";
 
       card.innerHTML = `
         <div class="finding-header" role="button" tabindex="0" aria-expanded="true">
@@ -979,6 +998,7 @@
             <div class="finding-badges-row">
               <span class="sev-badge ${sevLower}">${escapeHTML(finding.severity || "MEDIUM")}</span>
               <span class="finding-rule-tag">${escapeHTML(finding.rule || "rule-match")}</span>
+              ${analysisMethodBadge}
               <span class="finding-file-loc">${escapeHTML(finding.file || "source")} : line ${escapeHTML(finding.line || 1)}</span>
             </div>
             <h3 class="finding-title">${idx + 1}. ${escapeHTML(finding.title || finding.message || "Code review finding")}</h3>
@@ -1376,8 +1396,8 @@
 
     try {
       const controller = new AbortController();
-      const // The dashboard API runs with a 10-second Lambda ceiling; leave headroom for gateway transit.
-      timeoutId = setTimeout(() => controller.abort(), 27000);
+      // The dashboard API allows 25 seconds; stop before API Gateway 30-second ceiling.
+      const timeoutId = setTimeout(() => controller.abort(), 27000);
 
       const response = await fetch(`${API_BASE}/review`, {
         method: "POST",
@@ -1402,6 +1422,10 @@
 
       const rawFindings = Array.isArray(result.findings) ? result.findings : [];
       review.liveResult = result;
+      review.sourceContextFilesLoaded = Number(result.source_context_files_loaded ?? 0);
+      review.changedFilesManifestAvailable = Array.isArray(result.changed_files);
+      review.totalChangedFiles = Number(result.total_changed_files ?? result.changed_files_count ?? 0);
+      review.changedFilesTruncated = Boolean(result.changed_files_truncated);
       review.files = String(result.files_scanned ?? 0).padStart(2, "0");
       review.filesCountNum = Number(result.files_scanned ?? 0);
       review.signals = Number(result.finding_count ?? rawFindings.length);
@@ -1411,50 +1435,113 @@
       review.decision = review.signals > 0
         ? "Findings require manual verification"
         : "No findings detected by configured rules";
+
+      const manifest = Array.isArray(result.changed_files) ? result.changed_files : [];
+      const manifestAdded = manifest.reduce((sum, file) => sum + Math.max(0, Number(file.additions) || 0), 0);
+      const manifestRemoved = manifest.reduce((sum, file) => sum + Math.max(0, Number(file.deletions) || 0), 0);
+      const totalAdded = result.additions == null ? manifestAdded : Math.max(0, Number(result.additions) || 0);
+      const totalRemoved = result.deletions == null ? manifestRemoved : Math.max(0, Number(result.deletions) || 0);
+      review.added = `+${totalAdded}`;
+      review.removed = `−${totalRemoved}`;
       review.decisionCopy =
-        `${result.files_scanned} files scanned. ${review.signals} finding(s) detected. Read-only analysis; no GitHub comments were published.`;
+        `${result.files_scanned} files scanned. ${review.signals} finding(s) detected. ` +
+        `${review.sourceContextFilesLoaded} full-source Python file(s) loaded for AST context. ` +
+        "Read-only analysis; no GitHub comments were published.";
 
       const liveFileMap = new Map();
+      manifest.forEach(file => {
+        const path = String(file.filename || "").trim();
+        if (!path) return;
+        liveFileMap.set(path, {
+          path,
+          status: String(file.status || "unknown"),
+          addedCount: Math.max(0, Number(file.additions) || 0),
+          removedCount: Math.max(0, Number(file.deletions) || 0),
+          changes: Math.max(0, Number(file.changes) || 0),
+          patchAvailable: Boolean(file.patch_available),
+          signals: 0
+        });
+      });
       rawFindings.forEach(f => {
         const path = String(f.filename || f.file || "").trim();
         if (!path) return;
-        const item = liveFileMap.get(path) || { path, signals: 0 };
+        const item = liveFileMap.get(path) || {
+          path, status: "unknown", addedCount: 0, removedCount: 0,
+          changes: 0, patchAvailable: false, signals: 0
+        };
         item.signals += 1;
         liveFileMap.set(path, item);
       });
+
+      const typeInfo = {
+        PY: { name: "Python", color: "orange-fill" },
+        JS: { name: "JavaScript", color: "violet-fill" },
+        TS: { name: "TypeScript", color: "blue-fill" },
+        CSS: { name: "Stylesheets", color: "mint-fill" },
+        MD: { name: "Markdown", color: "violet-fill" },
+        YML: { name: "Configuration", color: "mint-fill" },
+        FILE: { name: "Other files", color: "" }
+      };
+      function fileTypeForPath(path) {
+        const name = String(path || "").toLowerCase();
+        if (name.endsWith(".py")) return "PY";
+        if (name.endsWith(".js") || name.endsWith(".jsx") || name.endsWith(".mjs")) return "JS";
+        if (name.endsWith(".ts") || name.endsWith(".tsx")) return "TS";
+        if (name.endsWith(".css") || name.endsWith(".scss")) return "CSS";
+        if (name.endsWith(".md") || name.endsWith(".mdx")) return "MD";
+        if (name.endsWith(".yml") || name.endsWith(".yaml") || name.endsWith(".json") || name.endsWith(".toml")) return "YML";
+        return "FILE";
+      }
+
       review.changedFiles = Array.from(liveFileMap.values()).map(file => ({
-        path: file.path,
-        type: file.path.toLowerCase().endsWith(".py") ? "PY" :
-          file.path.toLowerCase().endsWith(".js") || file.path.toLowerCase().endsWith(".jsx") ? "JS" :
-          file.path.toLowerCase().endsWith(".ts") || file.path.toLowerCase().endsWith(".tsx") ? "TS" : "FILE",
-        added: "—",
-        removed: "—",
-        signals: file.signals
+        ...file,
+        type: fileTypeForPath(file.path),
+        added: file.addedCount ? `+${file.addedCount}` : "0",
+        removed: file.removedCount ? `−${file.removedCount}` : "0"
       }));
-      review.fileTypes = review.changedFiles.map(file => [
-        file.type,
-        file.path,
-        review.changedFiles.length ? Math.round((file.signals / Math.max(1, rawFindings.length)) * 100) : 0,
-        String(file.signals).padStart(2, "0"),
-        file.signals ? "orange-fill" : "mint-fill"
+
+      const groupedTypes = new Map();
+      review.changedFiles.forEach(file => {
+        const info = typeInfo[file.type] || typeInfo.FILE;
+        const group = groupedTypes.get(file.type) || {
+          type: file.type, name: info.name, color: info.color, files: 0, changes: 0
+        };
+        group.files += 1;
+        group.changes += file.changes || (file.addedCount + file.removedCount);
+        groupedTypes.set(file.type, group);
+      });
+      const typeGroups = Array.from(groupedTypes.values());
+      const totalTypeChanges = typeGroups.reduce((sum, group) => sum + group.changes, 0);
+      const typeWeight = group => totalTypeChanges > 0 ? group.changes : 1;
+      const denominator = typeGroups.reduce((sum, group) => sum + typeWeight(group), 0);
+      review.fileTypes = typeGroups.map(group => [
+        group.type, group.name,
+        denominator ? Math.round((typeWeight(group) / denominator) * 100) : 0,
+        String(group.files).padStart(2, "0"), group.color
       ]);
 
-      if (rawFindings.length > 0) {
-        review.findings = rawFindings.map((f, i) => ({
+      // Always replace the previous dossier findings, even when the live result is clean.
+      review.findings = rawFindings.map((f, i) => {
+        const rule = f.rule || f.type || "rule-match";
+        const method = String(f.analysis_method || "pattern").toUpperCase();
+        return {
           id: `LIVE-${review.pr}-${i + 1}`,
           severity: String(f.severity || "HIGH").toUpperCase(),
-          rule: f.rule || f.type || "rule-match",
-          category: "Live AWS Scan",
+          rule,
+          category: method === "AST" ? "Python AST" : "Pattern rule",
+          analysisMethod: method,
           title: f.message || f.description || "Rule violation detected",
           file: f.filename || f.file || "Changed file",
           line: f.line || 1,
           issue: f.message || f.description || "Matched deterministic review rule.",
-          impact: "Flagged by live AWS API review worker for developer verification.",
+          impact: "Flagged by the read-only Sentinel API for developer verification.",
           remediation: f.suggestion || "Inspect the flagged file and line before merging.",
           trace: {
             step1: `${f.filename || f.file || "Changed file"} · line ${f.line || 1}`,
-            step2: `${f.rule || "rule-match"} (${String(f.severity || "HIGH").toUpperCase()})`,
-            step3: "Live API read-only verification required"
+            step2: `${rule} (${String(f.severity || "HIGH").toUpperCase()})`,
+            step3: method === "AST"
+              ? "Python AST match · inspect the actual diff context below"
+              : "Deterministic pattern match · inspect the actual diff context below"
           },
           diffLines: Array.isArray(f.diff_context) ? f.diff_context.map(line => {
             const type = line.type === "add" || line.type === "del" ? line.type : "ctx";
@@ -1463,22 +1550,21 @@
               oldNum: line.old_line ?? "",
               newNum: line.new_line ?? "",
               type,
-              // Preserve the unified-diff marker separately from the source text.
               code: type === "add" ? `+${rawCode}` : type === "del" ? `-${rawCode}` : rawCode,
               focus: Boolean(line.focus),
               annotation: line.focus
-                ? `Matched ${f.rule || "rule"} (${String(f.severity || "HIGH").toUpperCase()}): ${f.message || "Rule match"}`
+                ? `Matched ${rule} (${String(f.severity || "HIGH").toUpperCase()}): ${f.message || "Rule match"}`
                 : ""
             };
           }) : []
-        }));
-      }
+        };
+      });
 
       renderReview(selectedReview);
 
       addTimelineEvent(
         "Live code review completed",
-        `PR #${review.pr} · ${result.files_scanned} files scanned · ${review.signals} finding(s) · comments not published`,
+        `PR #${review.pr} · ${result.files_scanned} files scanned · ${review.signals} finding(s) · ${review.sourceContextFilesLoaded} full-source file(s) · comments not published`,
         review.signals > 0 ? "red" : "mint",
         "api"
       );

@@ -315,6 +315,23 @@ def _positive_pr_number(value: Any) -> int:
     return number
 
 
+def _nonnegative_count(value: Any) -> int:
+    """Accept bounded integer counts from GitHub JSON without trusting coercions."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return min(max(value, 0), 10_000_000)
+
+
+def _pr_total_count(
+    pr: dict[str, Any], key: str, files: list[dict[str, Any]], file_key: str
+) -> int:
+    """Prefer GitHub aggregate counts, falling back to the bounded file list."""
+    value = pr.get(key)
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 100_000_000:
+        return value
+    return sum(_nonnegative_count(item.get(file_key)) for item in files)
+
+
 def _get_open_pr_and_files(
     token: str, pr_number: int
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -342,10 +359,18 @@ def _get_open_pr_and_files(
         patch = item.get("patch")
         if not isinstance(patch, str):
             patch = ""
+        additions = _nonnegative_count(item.get("additions"))
+        deletions = _nonnegative_count(item.get("deletions"))
+        changes = _nonnegative_count(item.get("changes"))
+        if changes == 0 and (additions or deletions):
+            changes = additions + deletions
         files.append({
             "filename": str(item.get("filename", "unknown"))[:1000],
             "status": str(item.get("status", "unknown"))[:40],
             "patch": patch,
+            "additions": additions,
+            "deletions": deletions,
+            "changes": changes,
         })
     return pr, files
 
@@ -371,6 +396,22 @@ def review_pull_request(token: str, pr_number: int) -> dict[str, Any]:
         "url": str(pr.get("html_url", "")),
         "head_sha": head_sha,
         "source_context_files_loaded": source_context_files_loaded,
+        "changed_files_count": len(files),
+        "total_changed_files": _nonnegative_count(pr.get("changed_files")) or len(files),
+        "changed_files_truncated": _nonnegative_count(pr.get("changed_files")) > len(files),
+        "additions": _pr_total_count(pr, "additions", files, "additions"),
+        "deletions": _pr_total_count(pr, "deletions", files, "deletions"),
+        "changed_files": [
+            {
+                "filename": item["filename"],
+                "status": item["status"],
+                "additions": item["additions"],
+                "deletions": item["deletions"],
+                "changes": item["changes"],
+                "patch_available": bool(item.get("patch")),
+            }
+            for item in files
+        ],
         "status": "reviewed",
         "mode": "read-only",
         "files_scanned": int(analysis["files_scanned"]),
