@@ -818,6 +818,8 @@
         ? "This curated sample has no file list for the selected record."
         : review.liveResult && !review.changedFilesManifestAvailable
           ? "This API response does not include a complete changed-file manifest yet. Update the dashboard API deployment to show clean files and line-change totals."
+          : review.liveResult
+          ? "The API returned no changed-file entries for this pull request."
           : "Run a live review to load the pull request changed-file manifest.";
       list.appendChild(empty);
       return;
@@ -829,7 +831,9 @@
       btn.className = "changed-file-item";
       const sigBadge = file.signals > 0
         ? `<span class="badge badge-risk">${file.signals} SIGNAL${file.signals > 1 ? "S" : ""}</span>`
-        : `<span class="badge badge-clean">CLEAN</span>`;
+        : review.liveResult
+          ? `<span class="badge badge-clean">NO MATCH</span>`
+          : `<span class="badge badge-clean">SAMPLE CLEAN</span>`;
 
       btn.innerHTML = `
         <span class="changed-file-path">${escapeHTML(file.path)}</span>
@@ -984,6 +988,9 @@
 
       const hasDiff = Array.isArray(finding.diffLines) && finding.diffLines.length > 0;
       const hasFix = Array.isArray(finding.fixLines) && finding.fixLines.length > 0;
+      const analysisMethodBadge = finding.analysisMethod
+        ? `<span class="finding-rule-tag">${escapeHTML(finding.analysisMethod)}</span>`
+        : "";
 
       card.innerHTML = `
         <div class="finding-header" role="button" tabindex="0" aria-expanded="true">
@@ -991,6 +998,7 @@
             <div class="finding-badges-row">
               <span class="sev-badge ${sevLower}">${escapeHTML(finding.severity || "MEDIUM")}</span>
               <span class="finding-rule-tag">${escapeHTML(finding.rule || "rule-match")}</span>
+              ${analysisMethodBadge}
               <span class="finding-file-loc">${escapeHTML(finding.file || "source")} : line ${escapeHTML(finding.line || 1)}</span>
             </div>
             <h3 class="finding-title">${idx + 1}. ${escapeHTML(finding.title || finding.message || "Code review finding")}</h3>
