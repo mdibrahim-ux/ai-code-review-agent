@@ -94,6 +94,22 @@ class ReviewEngineTests(unittest.TestCase):
             [("add", 1)],
         )
 
+    def test_ast_ignores_print_text_in_comments_and_strings(self):
+        findings = analyze_patch(
+            "logging.py",
+            (
+                "@@ -1,1 +1,3 @@\n"
+                '+message = "print(secret_value)"\n'
+                '+# print(secret_value)\n'
+                '+print(secret_value)\n'
+            ),
+        )
+
+        matches = [item for item in findings if item["rule"] == "debug-print"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["line"], 3)
+        self.assertEqual(matches[0]["analysis_method"], "AST")
+
     def test_ast_detects_subprocess_shell_true_with_multiline_call(self):
         findings = analyze_patch(
             "runner.py",

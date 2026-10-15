@@ -13,12 +13,17 @@ _HUNK_HEADER = re.compile(
 _MAX_CONTEXT_LINE_CHARS = 2_000
 _CONTEXT_RADIUS = 2
 
-_AST_HANDLED_RULES = {"unsafe-eval"}
+_AST_HANDLED_RULES = {"unsafe-eval", "debug-print"}
 _AST_RULE_MESSAGES = {
     "unsafe-eval": (
         "HIGH",
         "Dynamic code execution can be unsafe. Avoid eval(), "
         "including qualified calls.",
+    ),
+    "debug-print": (
+        "LOW",
+        "Debug print output can clutter logs or expose sensitive values. "
+        "Use structured logging where appropriate.",
     ),
     "unsafe-exec": (
         "HIGH",
@@ -166,6 +171,8 @@ def _ast_call_rules(node: ast.Call) -> list[tuple[str, ast.AST]]:
         matches.append(("unsafe-eval", node))
     elif simple_name == "exec":
         matches.append(("unsafe-exec", node))
+    elif simple_name == "print":
+        matches.append(("debug-print", node))
 
     if (
         func_name.startswith("subprocess.")
