@@ -187,7 +187,8 @@ def _fetch_full_python_source(filename: str, ref: str, token: str) -> str | None
         return None
 
     encoded_content = payload.get("content")
-    if not isinstance(encoded_content, str) or len(encoded_content) > (MAX_SOURCE_FILE_BYTES * 4 // 3 + 2_000):
+    max_encoded_chars = MAX_SOURCE_FILE_BYTES * 4 // 3 + 2_000
+    if not isinstance(encoded_content, str) or len(encoded_content) > max_encoded_chars:
         return None
     try:
         source_bytes = base64.b64decode(encoded_content, validate=False)
