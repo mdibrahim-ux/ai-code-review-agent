@@ -226,6 +226,15 @@ jobs:
             --query '{FunctionName:FunctionName,FunctionArn:FunctionArn,Runtime:Runtime,Handler:Handler,LastUpdateStatus:LastUpdateStatus,LastModified:LastModified,CodeSha256:CodeSha256}' \
             --output json
 
+      - name: Verify scoped dashboard Lambda read access
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api \
+            --query '{FunctionName:FunctionName,FunctionArn:FunctionArn,Runtime:Runtime,Handler:Handler,Timeout:Timeout,LastUpdateStatus:LastUpdateStatus,CodeSha256:CodeSha256}' \
+            --output json
+
   # 4. Manually confirmed deployment to the existing Lambda
   deploy-lambda:
     name: Deploy Code Review Agent (Manual Confirmation)
@@ -517,7 +526,37 @@ jobs:
 
           echo "Dashboard API deployment target verified: $FUNCTION_ARN"
 
-      # This is the only step that changes the dashboard API Lambda code.
+      # This changes only the timeout on the existing dashboard API Lambda.
+      - name: Set dashboard API execution timeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda update-function-configuration \
+            --function-name sentinel-dashboard-api \
+            --timeout 10 \
+            --output json
+
+      - name: Wait for dashboard API configuration update
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws lambda wait function-updated-v2 --function-name sentinel-dashboard-api
+
+      - name: Verify dashboard API execution timeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          TIMEOUT="$(aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api \
+            --query Timeout \
+            --output text)"
+          if [[ "$TIMEOUT" != "10" ]]; then
+            echo "::error::Unexpected dashboard API timeout: $TIMEOUT"
+            exit 1
+          fi
+          echo "Verified dashboard API timeout: $TIMEOUT seconds."
+
+      # This step updates the dashboard API code after its configuration is ready.
       - name: Update dashboard API Lambda code
         shell: bash
         run: |
@@ -553,6 +592,11 @@ jobs:
             exit 1
           fi
           echo "Dashboard API code checksum matches the validated artifact."
+
+          aws lambda get-function-configuration \
+            --function-name sentinel-dashboard-api \
+            --query '{FunctionName:FunctionName,FunctionArn:FunctionArn,Runtime:Runtime,Handler:Handler,Timeout:Timeout,LastUpdateStatus:LastUpdateStatus,LastModified:LastModified,CodeSha256:CodeSha256}' \
+            --output json
 
       - name: Smoke test deployed dashboard API through API Gateway
         shell: bash

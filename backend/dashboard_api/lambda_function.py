@@ -32,7 +32,8 @@ AWS_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 PARAMETER_NAME = "/code-review-agent/github-token"
 GITHUB_API = "https://api.github.com"
 USER_AGENT = "Sentinel-Dashboard-API"
-REQUEST_TIMEOUT_SECONDS = 8
+# Bound each upstream HTTP request to fit inside the dashboard Lambda time budget.
+REQUEST_TIMEOUT_SECONDS = 4
 MAX_PULL_REQUESTS = 30
 MAX_CHANGED_FILES = 100
 MAX_PATCH_BYTES = 100_000

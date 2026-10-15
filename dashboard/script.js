@@ -1367,7 +1367,8 @@
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const // The dashboard API runs with a 10-second Lambda ceiling; leave headroom for gateway transit.
+      timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const response = await fetch(`${API_BASE}/review`, {
         method: "POST",

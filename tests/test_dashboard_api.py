@@ -121,6 +121,11 @@ class DashboardApiTests(unittest.TestCase):
         review.assert_called_once_with("fake-token", 7)
         self.assertFalse(body["comments_published"])
 
+    def test_github_request_timeout_is_bounded_for_dashboard_lambda(self):
+        # The deployment workflow sets a 10-second function ceiling.
+        # Each upstream request must leave time for the remaining review steps.
+        self.assertEqual(api.REQUEST_TIMEOUT_SECONDS, 4)
+
     def test_unknown_route_is_404_and_method_is_405(self):
         status, body, _ = decode_response(api.lambda_handler(api_event("GET", "/unknown"), None))
         self.assertEqual(status, 404)
