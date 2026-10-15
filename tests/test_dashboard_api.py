@@ -115,7 +115,10 @@ class DashboardApiTests(unittest.TestCase):
         self.assertEqual(body["deletions"], 2)
         self.assertEqual(
             [
-                (item["filename"], item["additions"], item["deletions"], item["changes"], item["patch_available"])
+                (
+                    item["filename"], item["additions"], item["deletions"],
+                    item["changes"], item["patch_available"],
+                )
                 for item in body["changed_files"]
             ],
             [
