@@ -46,11 +46,11 @@ class ReviewEngineTests(unittest.TestCase):
         findings = analyze_patch(
             "app.py",
             (
-                "@@ -10,3 +10,4 @@\\n"
-                " context_before = 1\\n"
-                "-result = safe_call(user_input)\\n"
-                "+result = eval(user_input)\\n"
-                " context_after = 2\\n"
+                "@@ -10,3 +10,4 @@\n"
+                " context_before = 1\n"
+                "-result = safe_call(user_input)\n"
+                "+result = eval(user_input)\n"
+                " context_after = 2\n"
             ),
         )
 
@@ -81,10 +81,10 @@ class ReviewEngineTests(unittest.TestCase):
         findings = analyze_patch(
             "app.py",
             (
-                "@@ -1,1 +1,1 @@\\n"
-                "+result = eval(user_input)\\n"
-                "@@ -100,1 +100,1 @@\\n"
-                " far_away = True\\n"
+                "@@ -1,1 +1,1 @@\n"
+                "+result = eval(user_input)\n"
+                "@@ -100,1 +100,1 @@\n"
+                " far_away = True\n"
             ),
         )
 

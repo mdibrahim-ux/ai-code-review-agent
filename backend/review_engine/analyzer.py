@@ -7,7 +7,7 @@ from typing import Any
 from .rules import RULES, SEVERITY_ORDER, is_test_file
 
 _HUNK_HEADER = re.compile(
-    r"^@@\\s+-(\\d+)(?:,(\\d+))?\\s+\\+(\\d+)(?:,(\\d+))?\\s+@@"
+    r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@"
 )
 _MAX_CONTEXT_LINE_CHARS = 2_000
 _CONTEXT_RADIUS = 2
@@ -32,7 +32,7 @@ def _parse_patch(patch: str) -> list[dict[str, Any]]:
             new_line = int(match.group(3))
             continue
 
-        if raw.startswith(("+++", "---", "\\\\")):
+        if raw.startswith(("+++", "---", "\\")):
             continue
 
         if raw.startswith("+"):
