@@ -129,6 +129,11 @@ The `Python CI` workflow can build and validate both Lambda ZIPs. Deployments ar
 
 The workflow verifies the selected Lambda ARN, runtime, handler, and deployed ZIP checksum. The dashboard API deployment additionally calls the existing API Gateway health/queue/review endpoints after updating the code. No new AWS service is created by these workflows.
 
+### Dashboard API timeout budget
+
+The manually confirmed dashboard API deployment sets the existing `sentinel-dashboard-api` Lambda timeout to 10 seconds and verifies that configuration after the update. Each outbound GitHub HTTP request is bounded to 4 seconds, leaving time for the second request and response handling. The browser waits up to 12 seconds for a live review response, below the existing API Gateway 30-second integration timeout. This uses existing resources only; it does not create a new AWS service or hosting resource.
+
+
 ## AWS Configuration
 
 The webhook receiver runs on AWS Lambda and integrates with GitHub through a webhook.
@@ -151,8 +156,3 @@ The automated Python test workflow has passed on the `test-ai-review` branch.
 ## License
 
 Add a license if you intend to distribute this project publicly.
-
-
-### Dashboard API timeout budget
-
-The manually confirmed dashboard API deployment sets the existing `sentinel-dashboard-api` Lambda timeout to 10 seconds and verifies that configuration after the update. Each outbound GitHub HTTP request is bounded to 4 seconds, leaving time for the second request and response handling. The browser waits up to 12 seconds for a live review response, below the existing API Gateway 30-second integration timeout. This uses existing resources only; it does not create a new AWS service or hosting resource.
