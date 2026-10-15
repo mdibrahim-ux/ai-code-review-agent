@@ -1014,7 +1014,7 @@
               <div class="diff-tabs">
                 <button type="button" class="diff-tab-btn active" data-mode="patch">PR Patch Diff</button>
                 ${hasFix ? `<button type="button" class="diff-tab-btn" data-mode="fix">Recommended Fix Patch ✓</button>` : ""}
-                <button type="button" class="diff-copy-btn">Copy Fix ⎘</button>
+                <button type="button" class="diff-copy-btn">${hasFix ? "Copy Fix" : "Copy Diff Context"} ⎘</button>
               </div>
             </div>
             <div class="diff-table-wrap">
@@ -1070,15 +1070,22 @@
         });
       });
 
-      // Copy snippet button
+      // Copy a remediation patch if one exists; otherwise copy the observed PR diff context.
       $(".diff-copy-btn", card)?.addEventListener("click", () => {
         const sourceLines = hasFix ? finding.fixLines : finding.diffLines;
         const snippet = (sourceLines || [])
-          .filter(l => l.type !== "del")
-          .map(l => l.code.replace(/^[+-]\s?/, ""))
-          .join("\n");
+          .map(line => {
+            const code = String(line.code || "").replace(/^[+-]\\s?/, "");
+            if (hasFix) return line.type === "del" ? null : code;
+            const prefix = line.type === "add" ? "+" : line.type === "del" ? "-" : " ";
+            return prefix + code;
+          })
+          .filter(line => line !== null)
+          .join("\\n");
         navigator.clipboard?.writeText(snippet).catch(() => {});
-        showToast(`Copied remediation snippet for ${finding.file}`);
+        showToast(hasFix
+          ? `Copied remediation patch for ${finding.file}`
+          : `Copied observed diff context for ${finding.file}`);
       });
 
       findingsList.appendChild(card);
@@ -1449,7 +1456,21 @@
             step2: `${f.rule || "rule-match"} (${String(f.severity || "HIGH").toUpperCase()})`,
             step3: "Live API read-only verification required"
           },
-          diffLines: []
+          diffLines: Array.isArray(f.diff_context) ? f.diff_context.map(line => {
+            const type = line.type === "add" || line.type === "del" ? line.type : "ctx";
+            const rawCode = String(line.code || "");
+            return {
+              oldNum: line.old_line ?? "",
+              newNum: line.new_line ?? "",
+              type,
+              // Preserve the unified-diff marker separately from the source text.
+              code: type === "add" ? `+${rawCode}` : type === "del" ? `-${rawCode}` : rawCode,
+              focus: Boolean(line.focus),
+              annotation: line.focus
+                ? `Matched ${f.rule || "rule"} (${String(f.severity || "HIGH").toUpperCase()}): ${f.message || "Rule match"}`
+                : ""
+            };
+          }) : []
         }));
       }
 
