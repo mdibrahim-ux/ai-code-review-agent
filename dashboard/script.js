@@ -799,7 +799,16 @@
     list.replaceChildren();
 
     const files = Array.isArray(review.changedFiles) ? review.changedFiles : [];
-    safeText("#changedFilesCountLabel", review.isSample ? `${files.length} SAMPLE FILES` : `${files.length} FINDING FILES`);
+    safeText(
+      "#changedFilesCountLabel",
+      review.isSample
+        ? `${files.length} SAMPLE FILES`
+        : review.changedFilesTruncated
+          ? `${files.length} OF ${review.totalChangedFiles} FILES SHOWN`
+          : review.changedFilesManifestAvailable
+            ? `${files.length} CHANGED FILES`
+            : `${files.length} FINDING FILES`
+    );
 
     if (!files.length) {
       const empty = document.createElement("div");
@@ -807,9 +816,9 @@
       empty.style.color = "var(--ink-muted)";
       empty.textContent = review.isSample
         ? "This curated sample has no file list for the selected record."
-        : review.liveResult
-          ? "The read-only endpoint returns paths for files with findings, but not a complete manifest of clean files or line-change totals."
-          : "Run a live review to load file paths for any findings; clean-file metadata is not currently exposed by this endpoint.";
+        : review.liveResult && !review.changedFilesManifestAvailable
+          ? "This API response does not include a complete changed-file manifest yet. Update the dashboard API deployment to show clean files and line-change totals."
+          : "Run a live review to load the pull request changed-file manifest.";
       list.appendChild(empty);
       return;
     }
@@ -839,7 +848,7 @@
         if (file.signals > 0) {
           showToast(`Inspecting findings in ${file.path}`);
         } else {
-          showToast(`${file.path} passed all active rule checks.`);
+          showToast(`No findings were returned for ${file.path} by the configured review rules.`);
         }
       });
 
@@ -911,10 +920,13 @@
     safeText("#sevCountMed", cMed);
     safeText("#sevCountLow", cLow);
 
+    const astFindingCount = allFindings.filter(f => String(f.analysisMethod || "").toUpperCase() === "AST").length;
     safeText(
       "#evidenceSourceBadge",
       review.liveResult
-        ? "LIVE AWS API ANALYSIS"
+        ? (review.sourceContextFilesLoaded > 0 || astFindingCount > 0
+          ? `LIVE AST + PATTERN · ${review.sourceContextFilesLoaded || 0} FULL-SOURCE FILES`
+          : "LIVE DETERMINISTIC REVIEW")
         : review.isSample
           ? "SAMPLE DOSSIER RECORD"
           : "DETERMINISTIC RULE ENGINE"
@@ -1544,7 +1556,7 @@
 
       addTimelineEvent(
         "Live code review completed",
-        `PR #${review.pr} · ${result.files_scanned} files scanned · ${review.signals} finding(s) · comments not published`,
+        `PR #${review.pr} · ${result.files_scanned} files scanned · ${review.signals} finding(s) · ${review.sourceContextFilesLoaded} full-source file(s) · comments not published`,
         review.signals > 0 ? "red" : "mint",
         "api"
       );
