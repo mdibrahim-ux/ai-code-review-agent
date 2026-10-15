@@ -173,3 +173,8 @@ Add a license if you intend to distribute this project publicly.
 ### Live dashboard diff context
 
 The read-only dashboard review response includes a small, line-numbered context window taken from the actual GitHub patch for each finding. The dashboard renders old/new line numbers and highlights the exact added line that matched a configured rule. This is observed patch context, not an LLM-generated fix; curated sample dossiers may still show illustrative remediation examples.
+
+
+### Live dashboard review telemetry
+
+The read-only review API returns a bounded changed-file manifest (path, status, additions, deletions, change count, and patch availability), aggregate change totals, and the number of full-source Python files loaded for AST analysis. The dashboard uses this metadata for the changed-file panel and language footprint, clears findings when a live review returns zero matches, and distinguishes AST from pattern-rule findings. It does not persist historical review data or publish GitHub comments.
