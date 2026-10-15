@@ -411,7 +411,7 @@
         </article>
       </section>
 
-      <!-- ─────────────────────── 02: AI Findings & Code-Diff Inspector ─────────────────────── -->
+      <!-- ─────────────────────── 02: Deterministic Findings & Code-Diff Inspector ─────────────────────── -->
       <section class="section-header" id="findings">
         <div class="section-header-left">
           <div class="section-eyebrow"><span>02</span> EXPLAINABILITY &amp; CODE-DIFF WORKBENCH</div>
@@ -434,7 +434,7 @@
             <button type="button" class="sev-pill" data-sev="LOW"><i class="sev-dot low"></i> LOW (<span id="sevCountLow">0</span>)</button>
           </div>
           <div class="evidence-filter-group">
-            <span class="concept-label" id="evidenceSourceBadge">DETERMINISTIC + AI ENGINE</span>
+            <span class="concept-label" id="evidenceSourceBadge">DETERMINISTIC RULE ENGINE</span>
           </div>
         </div>
 
@@ -494,7 +494,7 @@
             </div>
             <div>
               <h3>No active findings<span>.</span></h3>
-              <p>This pull request passed all configured deterministic and AI review rules with zero blocking signals. You can inspect the clean file diffs above or switch to a flagged pull request to examine high-risk findings and remediation diffs.</p>
+              <p>No findings are currently displayed for this pull request. Live reviews use the configured deterministic rule set; sample dossiers may include illustrative findings and patch examples. A clean scan does not guarantee that code is defect-free.</p>
               <div class="evidence-empty-actions">
                 <button class="inline-action" id="inspectFlaggedPrBtn" type="button">Inspect flagged PR #24 (3 High-Risk Signals) <span>↗</span></button>
                 <button class="inline-action" id="previewTraceBtn" type="button">Preview example evidence trace <span>⌁</span></button>
@@ -509,7 +509,7 @@
         <div class="section-header-left">
           <div class="section-eyebrow"><span>03</span> TELEMETRY &amp; RULE ENGINE ANALYTICS</div>
           <h2>Review intelligence &amp; rule coverage</h2>
-          <p>Distribution of surfaced findings by severity, 7-day review volume vs. risk detections, and active rule pack performance.</p>
+          <p>Active-queue severity counts and illustrative benchmark charts. Rule-family labels are examples; historical findings and per-rule performance are not persisted yet.</p>
         </div>
       </section>
 
@@ -549,8 +549,8 @@
             </div>
           </div>
           <div class="trend-legend">
-            <span>BLOCKING THRESHOLD: <b>HIGH+</b></span>
-            <span>FALSE-POSITIVE GUARD: <b>ON</b></span>
+            <span>MANUAL REVIEW SUGGESTED: <b>HIGH+</b></span>
+            <span>RULE MATCHES REQUIRE: <b>HUMAN REVIEW</b></span>
           </div>
         </article>
 
@@ -607,7 +607,7 @@
                 <span class="section-eyebrow">ACTIVE RULE PACKS</span>
                 <h3>Top triggered check families</h3>
               </div>
-              <span class="badge badge-branch">18 RULES ACTIVE</span>
+              <span class="badge badge-branch">RULE PACK PREVIEW</span>
             </div>
             <div class="rule-list">
               <div class="rule-row">
