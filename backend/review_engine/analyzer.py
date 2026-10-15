@@ -17,7 +17,8 @@ _AST_HANDLED_RULES = {"unsafe-eval"}
 _AST_RULE_MESSAGES = {
     "unsafe-eval": (
         "HIGH",
-        "Dynamic code execution can be unsafe. Avoid eval(), including qualified calls.",
+        "Dynamic code execution can be unsafe. Avoid eval(), "
+        "including qualified calls.",
     ),
     "unsafe-exec": (
         "HIGH",
@@ -25,7 +26,8 @@ _AST_RULE_MESSAGES = {
     ),
     "subprocess-shell-true": (
         "HIGH",
-        "shell=True invokes a command shell and can enable command injection. Prefer argument lists without a shell.",
+        "shell=True invokes a command shell and can enable command injection. "
+        "Prefer argument lists without a shell.",
     ),
     "unsafe-deserialization": (
         "HIGH",
@@ -33,7 +35,8 @@ _AST_RULE_MESSAGES = {
     ),
     "unsafe-yaml-load": (
         "HIGH",
-        "yaml.load() without a safe loader can construct unsafe objects. Use yaml.safe_load() or SafeLoader.",
+        "yaml.load() without a safe loader can construct unsafe objects. "
+        "Use yaml.safe_load() or SafeLoader.",
     ),
     "sql-string-interpolation": (
         "HIGH",
@@ -144,7 +147,10 @@ def _has_dynamic_sql_argument(node: ast.AST) -> bool:
         return any(isinstance(value, ast.FormattedValue) for value in node.values)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         left_is_literal = isinstance(node.left, ast.Constant) and isinstance(node.left.value, str)
-        right_is_literal = isinstance(node.right, ast.Constant) and isinstance(node.right.value, str)
+        right_is_literal = (
+            isinstance(node.right, ast.Constant)
+            and isinstance(node.right.value, str)
+        )
         return not (left_is_literal and right_is_literal)
     return False
 
