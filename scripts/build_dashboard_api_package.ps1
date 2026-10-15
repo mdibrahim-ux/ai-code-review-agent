@@ -66,6 +66,23 @@ assert response["statusCode"] == 200, response
 assert '"status": "ok"' in response["body"], response
 review = review_files([{"filename":"app.py","patch":"@@ -0,0 +1,1 @@\n+result = eval(user_input)\n"}])
 assert any(f.get("rule") == "unsafe-eval" for f in review["findings"]), review
+
+shell_patch = (
+    "@@ -1,1 +1,6 @@\n"
+    " import subprocess\n"
+    "+def run_command(command):\n"
+    "+    return subprocess.run(\n"
+    "+        command,\n"
+    "+        shell=True,\n"
+    "+    )\n"
+)
+shell_result = review_files([{"filename": "runner.py", "patch": shell_patch}])
+assert any(
+    f.get("rule") == "subprocess-shell-true" and f.get("line") == 5
+    for f in shell_result["findings"]
+), shell_result
+
+print("AST structural regression test passed.")
 print("Dashboard API ZIP integrity and runtime smoke tests passed.")
 '@
 

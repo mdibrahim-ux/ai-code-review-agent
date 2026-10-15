@@ -5,7 +5,7 @@ An automated code review system that analyzes GitHub pull requests, detects comm
 ## Features
 
 - **Automated code review:** Processes GitHub pull-request webhook events.
-- **Security checks:** Detects potential hardcoded secrets and unsafe use of `eval()`.
+- **Security checks:** Detects possible hardcoded credentials, broad exception handling, and debug output, with AST-aware Python checks for dynamic execution, risky subprocess calls, unsafe deserialization, unsafe YAML loading, and direct SQL string interpolation.
 - **Code quality checks:** Identifies broad exception handling and debug `print()` statements.
 - **Inline review comments:** Posts findings on relevant changed lines when possible.
 - **Secure webhook validation:** Verifies GitHub webhook signatures.
@@ -79,9 +79,21 @@ The script creates a deployment ZIP under `dist/` and verifies its contents and 
 
 ## GitHub Actions
 
-The `Python Tests` workflow runs on pushes to `main` and `test-ai-review`, and on pull requests targeting `main`.
+The `Python CI` workflow runs on pushes to `main` and `feature/**`, and on pull requests targeting `main`.
 
-It installs the Python dependency, runs unit tests, and checks Python compilation.
+It runs unit tests, Ruff linting, Python compilation, dashboard HTML/CSS/JavaScript checks, and both Lambda package-validation scripts. Pushes to `main` also verify scoped AWS OIDC read access. Production Lambda updates remain manually confirmed.
+
+## AST-Aware Python Checks
+
+The shared review engine uses Python's built-in `ast` module to inspect changed Python diff hunks when they are parseable. Current structural checks include:
+
+- Calls to `eval()` and `exec()`, including qualified calls.
+- `subprocess.run/Popen/call/check_call/check_output(..., shell=True)`.
+- `pickle` or `dill` `load()/loads()` deserialization.
+- `yaml.load()` without a recognized safe loader.
+- Direct f-string or non-constant string concatenation passed to SQL `execute()/executemany()`.
+
+The analyzer preserves changed-line numbers and nearby patch context. GitHub diffs can contain incomplete fragments; when a whole hunk cannot be parsed, the analyzer falls back to individually parseable added lines. This remains deterministic static analysis, not full-repository semantic analysis or an LLM review. Imported aliases, values constructed elsewhere, and complex multi-file flows may not be recognized, and all findings require developer verification.
 
 ## Dashboard API (Read-Only)
 
@@ -116,7 +128,7 @@ The dashboard is a static HTML/CSS/JavaScript site. It can be hosted on **GitHub
 2. Open **Actions → Publish Sentinel Dashboard → Run workflow**.
 3. Open the deployment job's environment URL to view the published dashboard.
 
-The workflow publishes only `dashboard/index.html`, `dashboard/style.css`, and `dashboard/script.js`. It is manually triggered initially so the first deployment does not run until Pages has been enabled. After the initial deployment succeeds, its trigger can be changed to publish automatically after dashboard changes merge to `main`.
+The workflow publishes only `dashboard/index.html`, `dashboard/style.css`, and `dashboard/script.js`. It supports manual `workflow_dispatch` runs and automatically publishes after changes to `dashboard/**` or `.github/workflows/pages.yml` merge into `main`. Its GitHub Pages action versions are pinned to immutable commit SHAs.
 
 The dashboard calls the existing API Gateway endpoints in `ap-south-1`. Its browser origin must be present in the API Gateway CORS allowlist for live API requests to work. CORS does not replace server-side access controls.
 
@@ -151,7 +163,7 @@ The dashboard API is deployed separately from the webhook receiver.
 
 ## Project Status
 
-The automated Python test workflow has passed on the `test-ai-review` branch.
+The `main` branch CI has passed unit tests, linting, syntax/asset checks, package validation, and AWS OIDC read-only verification. AST-aware checks are covered by targeted regression tests.
 
 ## License
 
