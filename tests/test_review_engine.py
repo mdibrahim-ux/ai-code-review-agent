@@ -98,7 +98,7 @@ class ReviewEngineTests(unittest.TestCase):
         findings = analyze_patch(
             "runner.py",
             (
-                "@@ -1,1 +1,5 @@\n"
+                "@@ -1,1 +1,6 @@\n"
                 " import subprocess\n"
                 "+def run_command(command):\n"
                 "+    return subprocess.run(\n"
@@ -111,7 +111,7 @@ class ReviewEngineTests(unittest.TestCase):
         matches = [item for item in findings if item["rule"] == "subprocess-shell-true"]
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0]["severity"], "HIGH")
-        self.assertEqual(matches[0]["line"], 4)
+        self.assertEqual(matches[0]["line"], 5)
         self.assertEqual(matches[0]["analysis_method"], "AST")
         self.assertTrue(any(line["focus"] for line in matches[0]["diff_context"]))
 
