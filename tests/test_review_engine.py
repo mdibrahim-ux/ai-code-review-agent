@@ -42,6 +42,58 @@ class ReviewEngineTests(unittest.TestCase):
         self.assertEqual(findings[0]["severity"], "LOW")
         self.assertEqual(findings[0]["line"], 1)
 
+    def test_finding_includes_real_patch_context_with_line_numbers(self):
+        findings = analyze_patch(
+            "app.py",
+            (
+                "@@ -10,3 +10,4 @@\n"
+                " context_before = 1\n"
+                "-result = safe_call(user_input)\n"
+                "+result = eval(user_input)\n"
+                " context_after = 2\n"
+            ),
+        )
+
+        self.assertEqual(len(findings), 1)
+        finding = findings[0]
+        self.assertEqual(finding["line"], 11)
+        self.assertEqual(finding["code"], "result = eval(user_input)")
+        self.assertEqual(
+            [
+                (
+                    line["type"],
+                    line["old_line"],
+                    line["new_line"],
+                    line["code"],
+                    line["focus"],
+                )
+                for line in finding["diff_context"]
+            ],
+            [
+                ("context", 10, 10, "context_before = 1", False),
+                ("del", 11, None, "result = safe_call(user_input)", False),
+                ("add", None, 11, "result = eval(user_input)", True),
+                ("context", 12, 12, "context_after = 2", False),
+            ],
+        )
+
+    def test_diff_context_does_not_cross_hunk_boundaries(self):
+        findings = analyze_patch(
+            "app.py",
+            (
+                "@@ -1,1 +1,1 @@\n"
+                "+result = eval(user_input)\n"
+                "@@ -100,1 +100,1 @@\n"
+                " far_away = True\n"
+            ),
+        )
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(
+            [(item["type"], item["new_line"]) for item in findings[0]["diff_context"]],
+            [("add", 1)],
+        )
+
     def test_ignores_test_fixtures(self):
         findings = analyze_patch(
             "tests/test_example.py",

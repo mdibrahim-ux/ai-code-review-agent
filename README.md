@@ -156,3 +156,8 @@ The automated Python test workflow has passed on the `test-ai-review` branch.
 ## License
 
 Add a license if you intend to distribute this project publicly.
+
+
+### Live dashboard diff context
+
+The read-only dashboard review response includes a small, line-numbered context window taken from the actual GitHub patch for each finding. The dashboard renders old/new line numbers and highlights the exact added line that matched a configured rule. This is observed patch context, not an LLM-generated fix; curated sample dossiers may still show illustrative remediation examples.
