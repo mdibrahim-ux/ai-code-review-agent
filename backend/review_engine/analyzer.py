@@ -40,7 +40,8 @@ _AST_RULE_MESSAGES = {
     ),
     "sql-string-interpolation": (
         "HIGH",
-        "SQL text is interpolated or concatenated directly in execute(). Use parameterized queries.",
+        "SQL text is interpolated or concatenated directly in execute(). "
+        "Use parameterized queries.",
     ),
 }
 _SUBPROCESS_CALLS = {"run", "Popen", "call", "check_call", "check_output"}
