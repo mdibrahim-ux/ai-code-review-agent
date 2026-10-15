@@ -94,6 +94,51 @@ class ReviewEngineTests(unittest.TestCase):
             [("add", 1)],
         )
 
+    def test_full_source_ast_detects_multiline_call_when_hunk_only_changes_keyword(self):
+        source = (
+            "import subprocess\n"
+            "\n"
+            "def run_command(command):\n"
+            "    return subprocess.run(\n"
+            "        command,\n"
+            "        shell=True,\n"
+            "    )\n"
+        )
+        patch = (
+            "@@ -6,1 +6,1 @@\n"
+            "-        shell=False,\n"
+            "+        shell=True,\n"
+        )
+
+        findings = analyze_patch("runner.py", patch, source_text=source)
+        matches = [item for item in findings if item["rule"] == "subprocess-shell-true"]
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["line"], 6)
+        self.assertEqual(matches[0]["analysis_method"], "AST")
+        self.assertTrue(any(
+            line["focus"] and line["new_line"] == 6
+            for line in matches[0]["diff_context"]
+        ))
+
+    def test_full_source_ast_only_reports_calls_overlapping_added_lines(self):
+        source = (
+            "import pickle\n"
+            "old_value = pickle.loads(old_payload)\n"
+            "new_value = safe_load(new_payload)\n"
+        )
+        patch = (
+            "@@ -3,1 +3,1 @@\n"
+            "-new_value = safe_load(new_payload)\n"
+            "+new_value = pickle.loads(new_payload)\n"
+        )
+
+        findings = analyze_patch("loader.py", patch, source_text=source)
+        matches = [item for item in findings if item["rule"] == "unsafe-deserialization"]
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["line"], 3)
+
     def test_ast_ignores_print_text_in_comments_and_strings(self):
         findings = analyze_patch(
             "logging.py",
