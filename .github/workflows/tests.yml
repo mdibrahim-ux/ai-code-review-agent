@@ -608,7 +608,7 @@ jobs:
             python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("status") == "ok", r; print("Health route passed.")'
 
           PULL_REQUESTS="$(curl --fail --silent --show-error --max-time 25 "$API_BASE/pull-requests")"
-          printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); assert isinstance(r.get("pull_requests"), list), r; assert r.get("repository") == "mdibrahim-ux/ai-code-review-agent", r; print(f"Live pull-request route passed ({len(r['pull_requests'])} open PR(s)).")'
+          printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); assert isinstance(r.get("pull_requests"), list), r; assert r.get("repository") == "mdibrahim-ux/ai-code-review-agent", r; print("Live pull-request route passed (" + str(len(r["pull_requests"])) + " open PR(s)).")'
 
           PR_NUMBER="$(printf '%s' "$PULL_REQUESTS" | python -c 'import json,sys; r=json.load(sys.stdin); p=r.get("pull_requests") or []; print(p[0]["number"] if p else "")')"
           if [[ -n "$PR_NUMBER" ]]; then
