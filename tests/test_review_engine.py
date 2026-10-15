@@ -125,7 +125,7 @@ class ReviewEngineTests(unittest.TestCase):
         source = (
             "import pickle\n"
             "old_value = pickle.loads(old_payload)\n"
-            "new_value = safe_load(new_payload)\n"
+            "new_value = pickle.loads(new_payload)\n"
         )
         patch = (
             "@@ -3,1 +3,1 @@\n"
