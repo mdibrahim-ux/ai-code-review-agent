@@ -470,7 +470,7 @@
       safeText("#metricLabel2", "SAMPLE FINDINGS SURFACED");
       animateCount($("#metricVal2"), 46);
       safeText("#metricChip2", "Across 128 reviews");
-      safeText("#metricSub2", "deterministic + AI matches");
+      safeText("#metricSub2", "configured rule matches");
 
       safeText("#metricLabel3", "SAMPLE HIGH-RISK SIGNALS");
       animateCount($("#metricVal3"), 8);
@@ -941,7 +941,9 @@
         safeText("#evidenceEmpty h3", "No active findings.");
         safeText(
           "#evidenceEmpty p",
-          `PR #${review.pr} (${review.repo}) passed all configured deterministic and AI review checks with 0 blocking signals across ${review.files} files.`
+          review.isSample
+            ? `This curated sample contains no displayed findings. Its example metadata is illustrative, not a live analysis result.`
+            : `No findings matched the configured deterministic rules across ${review.files} files. This does not guarantee that the code is defect-free.`
         );
       }
       return;
@@ -1591,7 +1593,7 @@
         lines.push(`   - *Remediation:* ${f.remediation}`);
       });
     } else {
-      lines.push("### Verification Result\nZero blocking signals matched under the active deterministic and AI rule packs.");
+      lines.push("### Verification Result\nNo findings matched the configured deterministic rules in this review. This does not guarantee the absence of defects.");
     }
     return lines.join("\n");
   }
@@ -1903,7 +1905,7 @@
   }
 
   /* ─────────────────────── Initial Render & Startup Sync ─────────────────────── */
-  // Default to PR #24 (valyrian-craft) on initial load so the user immediately sees rich AI findings & diffs,
+  // Default to a curated sample dossier on initial load so the user immediately sees illustrative findings & diff examples,
   // while keeping PR #1, #18, and #42 one click away in the queue!
   selectedReview = 1;
   renderReview(selectedReview);
